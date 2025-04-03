@@ -33,9 +33,13 @@ from numpy import nan as npNaN
 
 2.5 - Several messages will be shown in the terminal box and saved in the 'log.txt' file. Message timestamps use the host timezone.
 
-2.6 - The trading strategy was solely included to demostrate the app's behavior end-to-end and should not be used in production without rigorous forward testing. For the entry logic, when the moving average #1 (fast) crosses above moving average #2 (slow), a long position will be requested and all short opened positions done by the app will be closed. When the moving average #1 crosses below moving average #2, a short position will be requested and all long positions done by the app will be closed. 
+2.6 - The trading strategy was solely included to demostrate the app's end-to-end behavior and should not be used in production without rigorous forward testing. 
 
-2.7 - If the trading period is enabled ('strategy/filter/trading_period/enabled': 1 in 'config.json'), the app will only send orders between 'start' and 'end' timestamps (MT5 server's time) and it will close all opened positions when 'end' has been reached. If disabled, the app will trade any time. 
+2.7 - For the entry logic:
+2.7.1 - When the moving average #1 (fast) crosses above moving average #2 (slow), a long position will be requested and all opened short positions will be closed. 
+2.7.2 - When the moving average #1 (fast) crosses below moving average #2 (slow), a short position will be requested and all opened long positions will be closed.
 
-2.8 - Break even parameters are included, but not the logic.
+2.8 - If the trading period is enabled ('strategy/filter/trading_period/enabled': 1 in 'config.json'), the app will only send orders between 'start' and 'end' timestamps (MT5 server's time) and it will close all opened positions when 'end' has been reached. If disabled, the app will trade any time. 
+
+2.9 - Break even parameters are included, but not the logic.
 

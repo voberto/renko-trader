@@ -37,9 +37,9 @@ from numpy import nan as npNaN
 
 7. For the entry logic:
 
-  1. When the moving average #1 (fast) crosses above moving average #2 (slow), a long position will be requested and all opened short positions will be closed. 
+    1. When the moving average #1 (fast) crosses above moving average #2 (slow), a long position will be requested and all opened short positions will be closed. 
 
-  2. When the moving average #1 (fast) crosses below moving average #2 (slow), a short position will be requested and all opened long positions will be closed.
+    2. When the moving average #1 (fast) crosses below moving average #2 (slow), a short position will be requested and all opened long positions will be closed.
 
 8. If the trading period is enabled ('strategy/filter/trading_period/enabled': 1 in 'config.json'), the app will only send orders between 'start' and 'end' timestamps (MT5 server's time) and it will close all opened positions when 'end' has been reached. If disabled, the app will trade any time. 
 

@@ -27,7 +27,6 @@ class Strategy_MAC():
 
     def strat_start(self, MA_001_arg, MA_002_arg):
         if(MA_001_arg > 0.0 and MA_002_arg > 0.0):
-            # Entry
             if(MA_001_arg > MA_002_arg and self.trend_entry_curr != Trend_State.TREND_BULLISH):
                 self.trend_entry_prev = self.trend_entry_curr
                 self.trend_entry_curr = Trend_State.TREND_BULLISH
@@ -40,8 +39,6 @@ class Strategy_MAC():
         entry_updated = False
         list_msg_terminal = []
         if(MA_001_arg > 0.0 and MA_002_arg > 0.0):
-            # --- Update trends ---
-            # Entry
             if(MA_001_arg > MA_002_arg and self.trend_entry_curr != Trend_State.TREND_BULLISH):
                 self.trend_entry_prev = self.trend_entry_curr
                 self.trend_entry_curr = Trend_State.TREND_BULLISH
@@ -51,12 +48,12 @@ class Strategy_MAC():
             if(self.trend_entry_prev == Trend_State.TREND_BEARISH and self.trend_entry_curr == Trend_State.TREND_BULLISH and self.signal_entry != Signal_Type.SIGNAL_BUY):
                 self.signal_entry = Signal_Type.SIGNAL_BUY
                 entry_updated = True
-                list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New entry signal (buy) at (fake tstamp = {datetime.strftime(time_fake_arg, "%H:%M:%S.%f")[:-3]}," +
+                list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New entry signal (buy) at (fake tstamp = {datetime.strftime(time_fake_arg, "%H:%M:%S")}, " +
                                                                                                  f"real tstamp = {datetime.strftime(time_real_arg, "%H:%M:%S.%f")[:-3]}).")
             elif(self.trend_entry_prev == Trend_State.TREND_BULLISH and self.trend_entry_curr == Trend_State.TREND_BEARISH and self.signal_entry != Signal_Type.SIGNAL_SELL):
                 self.signal_entry = Signal_Type.SIGNAL_SELL
                 entry_updated = True
-                list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New entry signal (sell) at (fake tstamp = {datetime.strftime(time_fake_arg, "%H:%M:%S.%f")[:-3]}," +
+                list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New entry signal (sell) at (fake tstamp = {datetime.strftime(time_fake_arg, "%H:%M:%S")}, " +
                                                                                                   f"real tstamp = {datetime.strftime(time_real_arg, "%H:%M:%S.%f")[:-3]}).")
         return(entry_updated, self.signal_entry, list_msg_terminal)
 

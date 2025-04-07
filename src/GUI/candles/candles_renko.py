@@ -94,12 +94,14 @@ class Candles_Renko():
                 list_close = []
                 while(self.dict_renko_CbC['candle_size'] >= self.brick_size_ticks):
                     self.dict_renko_CbC['time'] += timedelta(minutes = 1)
+                    str_tstamp_fake = datetime.strftime(self.dict_renko_CbC['time'], "%H:%M:%S")
+                    str_tstamp_real = datetime.strftime(tstamp, "%H:%M:%S.%f")[:-3]
                     if(self.dict_renko_CbC['open'] < self.dict_renko_CbC['close']):
                         self.dict_renko_CbC['close'] = self.dict_renko_CbC['open'] + self.brick_size_ticks
-                        list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New bullish renko candle at {tstamp} (fake tstamp = {self.dict_renko_CbC['time']}).")
+                        list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New bullish renko candle at {str_tstamp_real} (fake tstamp = {str_tstamp_fake}).")
                     elif(self.dict_renko_CbC['open'] > self.dict_renko_CbC['close']):
                         self.dict_renko_CbC['close'] = self.dict_renko_CbC['open'] - self.brick_size_ticks
-                        list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New bearish renko candle at {tstamp} (fake tstamp = {self.dict_renko_CbC['time']}).")
+                        list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] New bearish renko candle at {str_tstamp_real} (fake tstamp = {str_tstamp_fake}).")
                     list_time.append(self.dict_renko_CbC['time'])
                     list_time_real.append(tstamp)
                     list_open.append(self.dict_renko_CbC['open'])

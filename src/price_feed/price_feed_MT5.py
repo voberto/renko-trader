@@ -41,7 +41,7 @@ class Price_Feed_MT5_Worker(QObject):
         except Exception as e:
             list_msg_terminal.append(f"[{tstamp_local_get()}][ERROR] Error while trying to connect to the price feed (MT5)! {e}.")
         finally:
-            if(self.connected == True):
+            if(self.connected is True):
                 list_msg_terminal.append(f"[{tstamp_local_get()}][INFO] Connected to the price feed (MT5).")
         return(self.connected, list_msg_terminal)
     
@@ -124,7 +124,7 @@ class Price_Feed_MT5_Worker(QObject):
 class Price_Feed_MT5_Manager(QObject):
     '''Manages the worker and setup the thread for the real time updates.'''
     connected = False
-    pf_worker = Price_Feed_MT5_Worker()
+    pf_worker = None
     pf_thread = None
     on_new_data = Signal(pd.DataFrame)
 
@@ -133,6 +133,7 @@ class Price_Feed_MT5_Manager(QObject):
         self.params_update(path_arg, symbol_arg, lookback_hours_arg)        
 
     def params_update(self, path_arg, symbol_arg, lookback_hours_arg):
+        self.pf_worker = Price_Feed_MT5_Worker()
         pf_has_worker = isinstance(self.pf_worker, type(Price_Feed_MT5_Worker()))
         if(pf_has_worker is True):
             self.pf_worker.params_update(path_arg, symbol_arg, lookback_hours_arg)
@@ -168,9 +169,6 @@ class Price_Feed_MT5_Manager(QObject):
     def thread_quit(self):
         self.pf_thread.isRunning = False
         self.pf_thread.quit()
-
-    def thread_delete_after_exit(self):
-        self.pf_thread.deleteLater()
 
     def price_feed_terminate(self):
         pf_has_worker = isinstance(self.pf_worker, type(Price_Feed_MT5_Worker()))

@@ -180,7 +180,10 @@ class Dialog_WinMain(QDialog):
         if(self.price_feed_connected is True):
             symbols_updated = self.symbols_update_on_connect(self.app_started)
             if(symbols_updated is True):
-                params_updated = self.params_update()
+                params_updated, str_terminal = self.params_update()
+                if(params_updated is True):
+                    self.tb_terminal.append(str_terminal)
+                    self.obj_logger.logfile_append(str_terminal)
             self.loop_OnInit()
             self.trader_connect()
             self.obj_price_feed.thread_start()
@@ -223,6 +226,7 @@ class Dialog_WinMain(QDialog):
 
     def params_update(self):
         params_updated = False
+        str_terminal = ""
         symbol_updated = self.symbol_update()
         brick_size_updated = self.brick_size_update()
         if(symbol_updated is True or brick_size_updated is True):
@@ -232,9 +236,7 @@ class Dialog_WinMain(QDialog):
                 self.btn_run.setEnabled(False)
                 self.btn_connect.setText("Connect")
                 str_terminal = f"[{tstamp_local_get()}][INFO] Parameters updated: symbol = {self.obj_price_feed.symbol_get()}, brick size = {self.brick_size}. Price feed disconnected. Connect again to update the chart."
-                self.tb_terminal.append(str_terminal)
-                self.obj_logger.logfile_append(str_terminal)
-        return(params_updated)
+        return(params_updated, str_terminal)
     
     def price_feed_ticks_startup_get(self):
         ticks_updated = False

@@ -25,13 +25,12 @@ class IND_EMA():
 
     def IND_CbC_update(self, time, time_real, price):
         CbC_updated = False
-        list_time = self.df_price['time'].tail(self.length - 1).to_list() + [time]
-        list_time_real = self.df_price['time_real'].tail(self.length - 1).to_list() + [time_real]
-        list_price = self.df_price['price'].tail(self.length - 1).to_list() + [price]
-        self.df_price = pd.DataFrame({'time': list_time, 'time_real': list_time_real, 'price': list_price})
-        series_IND = ta.ema(self.df_price['price'], length = self.length)
-        if(series_IND is not None):
-            self.df_IND = pd.DataFrame({'time': [list_time[-1]], 'IND': [series_IND.values[-1]]})
+        IND_mult = 2/(self.length + 1)
+        IND_last = self.df_IND.iloc[-1]['IND']
+        IND_curr = price * IND_mult + IND_last * (1 - IND_mult)
+        self.df_price = pd.DataFrame({'time': [time], 'time_real': [time_real], 'price': [price]})
+        if(IND_curr is not None and IND_curr > 0.0):
+            self.df_IND = pd.DataFrame({'time': [time], 'IND': [IND_curr]})
             self.df_IND.reset_index(drop = True, inplace = True)
             CbC_updated = True
         return(CbC_updated, self.df_IND)

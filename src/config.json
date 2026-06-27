@@ -9,8 +9,8 @@
     },
     "asset":
     {
-        "symbol": "XAUUSD", 
-        "brick_size_points": 10
+        "symbol": "US30.cash", 
+        "brick_size_points": 500
     },
     "price_feed":
     {

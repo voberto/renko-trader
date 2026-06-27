@@ -1,0 +1,190 @@
+//+------------------------------------------------------------------+
+//|                                                     RX_funcs.mqh |
+//+------------------------------------------------------------------+
+
+#include "../../EA_vars.mqh"
+
+
+class cl_RX
+{
+   private:
+      bool b_reconnect_attempt;
+      string str_RX_buffer;
+      // Startup protocol state flags
+      bool b_ack_symbol_received;
+      bool b_ack_history_received;
+
+   public:
+      // Constructor and destructor
+      cl_RX(void);
+      ~cl_RX(void);   
+      void func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg);
+      
+      // Startup protocol state getters
+      bool func_b_ack_symbol_received(void) const;
+      bool func_b_ack_history_received(void) const;
+      void func_reset_startup_acks(void);
+      void func_reset_session_state(void);
+
+   protected:
+      void func_RX_loop(cl_Comm_Sockets &obj_Comm_arg);
+      void func_message_handle(string str_msg_arg);
+      string func_str_field_extract(string str_json_arg, string str_key_arg);
+};
+
+
+// Constructor
+cl_RX::cl_RX(void)
+{
+   b_reconnect_attempt = false;
+   str_RX_buffer = "";
+   b_ack_symbol_received = false;
+   b_ack_history_received = false;
+}
+
+// Destructor
+cl_RX::~cl_RX(void)
+{
+
+}
+
+//--- Main OnTimer loop (reconnection + reception) ---
+void cl_RX::func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg)
+{
+   // Reconnect if disconnected
+   bool b_is_connected = obj_Comm_arg.IsConnected();
+   if(!b_is_connected)
+   {
+      if(!b_reconnect_attempt) printf("[RX][WARNING] Connection lost. Attempting reconnect ...");
+      
+      b_reconnect_attempt = true;
+      func_reset_session_state();
+      
+      obj_Comm_arg.Connect(false);
+      return;
+   }
+   if(b_is_connected)
+   {
+      b_reconnect_attempt = false;
+
+      // Receive and process incoming messages
+      func_RX_loop(obj_Comm_arg);
+   }
+}
+
+//--- Internal RX loop (buffering + framing) ---
+void cl_RX::func_RX_loop(cl_Comm_Sockets &obj_Comm_arg)
+{
+   string str_raw = obj_Comm_arg.ReceiveData(true);
+   if(str_raw == "") return;
+   str_RX_buffer += str_raw;
+
+   if(StringLen(str_RX_buffer) > RX_SIZE_LIMIT)
+   {
+      printf("[RX][WARNING] RX buffer exceeded safe size. Clearing partial data.");
+      str_RX_buffer = "";
+      return;
+   }
+
+   int i_newline_pos;
+   while((i_newline_pos = StringFind(str_RX_buffer, "\n")) >= 0)
+   {
+      string str_line = StringSubstr(str_RX_buffer, 0, i_newline_pos);
+      str_RX_buffer   = StringSubstr(str_RX_buffer, i_newline_pos + 1);
+
+      StringTrimLeft(str_line);
+      StringTrimRight(str_line);
+      if(StringLen(str_line) > 0) func_message_handle(str_line);
+   }
+}
+
+//--- Message dispatcher (startup protocol + legacy CMD) ---
+void cl_RX::func_message_handle(string str_msg_arg)
+{
+   string str_type = func_str_field_extract(str_msg_arg, "type");
+
+   if(str_type == RX_STATE_CMD)
+   {
+      // Legacy CMD handling (reserved for steady-state commands from App)
+   }
+   else if(str_type == RX_ACK_SYMBOL)
+   {
+      b_ack_symbol_received = true;
+      printf("[RX][INFO] ACK_STARTUP_SYMBOL received. App confirmed symbol reception.");
+   }
+   else if(str_type == RX_ACK_HISTORY)
+   {
+      b_ack_history_received = true;
+      printf("[RX][INFO] ACK_STARTUP_HISTORY received. App is ready for streaming ticks.");
+   }
+   else
+   {
+      printf("[RX][WARNING] Unknown message type '%s'. Ignored.", str_type);
+   }
+}
+
+//--- Startup protocol state getters (for the orchestrator) ---
+bool cl_RX::func_b_ack_symbol_received(void) const
+{
+   return b_ack_symbol_received;
+}
+
+bool cl_RX::func_b_ack_history_received(void) const
+{
+   return b_ack_history_received;
+}
+
+//--- Reset startup flags (called on reconnect or EA restart) ---
+void cl_RX::func_reset_startup_acks(void)
+{
+   b_ack_symbol_received = false;
+   b_ack_history_received = false;
+}
+
+void cl_RX::func_reset_session_state(void)
+{
+   str_RX_buffer = "";
+   func_reset_startup_acks();
+}
+
+//--- JSON field extractor (unchanged, robust parser) ---
+string cl_RX::func_str_field_extract(string str_json_arg, string str_key_arg)
+{
+   string str_search = "\"" + str_key_arg + "\":";
+   int i_pos = StringFind(str_json_arg, str_search);
+   if(i_pos < 0) return("");
+   int i_start = i_pos + StringLen(str_search);
+   while(i_start < StringLen(str_json_arg) && StringGetCharacter(str_json_arg, i_start) == ' ') i_start++;
+
+   if(i_start >= StringLen(str_json_arg)) return("");
+
+   ushort uc_first = StringGetCharacter(str_json_arg, i_start);
+   if(uc_first == '"')
+   {
+      i_start++;
+      string str_value = "";
+      int i = i_start;
+      while(i < StringLen(str_json_arg))
+      {
+         ushort c = StringGetCharacter(str_json_arg, i);
+         if(c == '\\') { i += 2; continue; }
+         if(c == '"')  break;
+         str_value += ShortToString(c);
+         i++;
+      }
+      return(str_value);
+   }
+   else
+   {
+      string str_value = "";
+      int i = i_start;
+      while(i < StringLen(str_json_arg))
+      {
+         ushort c = StringGetCharacter(str_json_arg, i);
+         if(c == ',' || c == '}' || c == ' ' || c == '\n') break;
+         str_value += ShortToString(c);
+         i++;
+      }
+      return(str_value);
+   }
+}

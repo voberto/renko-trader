@@ -1,0 +1,148 @@
+# comm_server.py
+# TCP server: binds, listens, and accepts a single EA connection at a time.
+# Spawns a cl_CommHandler in a daemon thread for each accepted connection.
+
+import socket
+import threading
+from typing import Callable, Optional
+
+from .comm_constants import (
+    RT_DEFAULT_HOST,
+    RT_DEFAULT_PORT,
+    RT_ACCEPT_BACKLOG,
+    RT_LOG_MODULE,
+)
+from .comm_connection_model import cl_EA_Connection
+from .comm_handler import cl_CommHandler
+
+
+class cl_CommServer:
+    """
+    Manages the server socket lifecycle and spawns a handler thread per connection.
+    Only one EA connection is expected at a time (RT_ACCEPT_BACKLOG = 1).
+    """
+
+    def __init__(
+        self,
+        host: str = RT_DEFAULT_HOST,
+        port: int = RT_DEFAULT_PORT,
+        logger_callback: Optional[Callable[[str], None]] = None,
+        on_symbol_received: Optional[Callable] = None,
+        on_history_received: Optional[Callable] = None,
+        on_tick_received: Optional[Callable] = None,
+        on_disconnected: Optional[Callable] = None,
+    ):
+        self._host = host
+        self._port = port
+        self._log = logger_callback or (lambda msg: None)
+        self._on_symbol_received = on_symbol_received
+        self._on_history_received = on_history_received
+        self._on_tick_received = on_tick_received
+        self._on_disconnected = on_disconnected
+
+        self._server_socket: Optional[socket.socket] = None
+        self._accept_thread: Optional[threading.Thread] = None
+        self._handler_thread: Optional[threading.Thread] = None
+        self._running: bool = False
+        self._lock = threading.Lock()
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def start(self) -> bool:
+        """
+        Bind and start listening. Spawns the accept loop in a daemon thread.
+        Returns True on success, False if already running or bind fails.
+        """
+        with self._lock:
+            if self._running:
+                self._log(f"[{RT_LOG_MODULE}] Server already running.")
+                return False
+
+            try:
+                self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self._server_socket.bind((self._host, self._port))
+                self._server_socket.listen(RT_ACCEPT_BACKLOG)
+                self._running = True
+            except Exception as e:
+                self._log(f"[{RT_LOG_MODULE}] Bind error on {self._host}:{self._port}: {e}.")
+                return False
+
+        self._log(f"[{RT_LOG_MODULE}] Listening on {self._host}:{self._port} — waiting for EA.")
+
+        self._accept_thread = threading.Thread(
+            target=self._accept_loop,
+            daemon=True,
+            name="CommServer-Accept"
+        )
+        self._accept_thread.start()
+        return True
+
+    def stop(self) -> None:
+        """
+        Stop the server: close listening socket and active connection.
+        """
+        with self._lock:
+            if not self._running:
+                self._log(f"[{RT_LOG_MODULE}] Server stop requested but not running.")
+                return
+            self._running = False
+
+        self._log(f"[{RT_LOG_MODULE}] Server stopping...")
+
+        try:
+            if self._server_socket:
+                self._server_socket.close()
+        except Exception:
+            pass
+
+        if self._accept_thread and self._accept_thread.is_alive():
+            self._accept_thread.join(timeout=2.0)
+
+        self._log(f"[{RT_LOG_MODULE}] Server stopped.")
+
+    @property
+    def is_running(self) -> bool:
+        return self._running
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _accept_loop(self) -> None:
+        """
+        Blocks on accept(). For each incoming connection, spawns a handler thread.
+        """
+        while self._running:
+            try:
+                client_socket, address = self._server_socket.accept()
+            except socket.error:
+                # Server socket was closed (stop() called)
+                break
+
+            host, port = address
+            self._log(f"[{RT_LOG_MODULE}] EA connected from {host}:{port}.")
+
+            connection = cl_EA_Connection(
+                host=host,
+                port=port,
+                socket=client_socket
+            )
+
+            handler = cl_CommHandler(
+                connection=connection,
+                logger_callback=self._log,
+                on_symbol_received=self._on_symbol_received,
+                on_history_received=self._on_history_received,
+                on_tick_received=self._on_tick_received,
+                on_disconnected=self._on_disconnected,
+            )
+
+            self._handler_thread = threading.Thread(
+                target=handler.run,
+                daemon=True,
+                name=f"CommHandler-{host}:{port}"
+            )
+            self._handler_thread.start()

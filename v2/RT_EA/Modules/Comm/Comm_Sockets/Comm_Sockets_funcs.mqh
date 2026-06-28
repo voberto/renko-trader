@@ -182,10 +182,14 @@ bool cl_Comm_Sockets::SendData(string str_data_arg, bool b_data_print_arg, strin
       }
       
       uchar uch_data_chars_arr[];
-      int i_data_len = StringToCharArray(str_data_arg, uch_data_chars_arr);
+      //int i_data_len = StringToCharArray(str_data_arg, uch_data_chars_arr);
+      int i_data_len = StringToCharArray(str_data_arg, uch_data_chars_arr, 0, WHOLE_ARRAY, CP_UTF8);
       
       // StringToCharArray appends a null terminator, so send data_len - 1 bytes
-      int i_send_result = SocketSend(m_client_socket, uch_data_chars_arr, i_data_len - 1);
+      int i_bytes_to_send = ArraySize(uch_data_chars_arr) - 1;
+      if (i_bytes_to_send <= 0) return false;
+
+      int i_send_result = SocketSend(m_client_socket, uch_data_chars_arr, i_bytes_to_send);
       if(i_send_result < 0)
       {
          int i_error = GetLastError();

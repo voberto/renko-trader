@@ -112,11 +112,12 @@ void cl_RX::func_RX_loop(cl_Comm_Sockets &obj_Comm_arg)
       return;
    }
 
-   int i_newline_pos;
-   while((i_newline_pos = StringFind(str_RX_buffer, "\n")) >= 0)
+   int i_delim_len = StringLen(COMM_MSG_DELIMITER);
+   int i_pos;
+   while((i_pos = StringFind(str_RX_buffer, COMM_MSG_DELIMITER)) >= 0)
    {
-      string str_line = StringSubstr(str_RX_buffer, 0, i_newline_pos);
-      str_RX_buffer   = StringSubstr(str_RX_buffer, i_newline_pos + 1);
+      string str_line = StringSubstr(str_RX_buffer, 0, i_pos);
+      str_RX_buffer   = StringSubstr(str_RX_buffer, i_pos + i_delim_len);
 
       StringTrimLeft(str_line);
       StringTrimRight(str_line);

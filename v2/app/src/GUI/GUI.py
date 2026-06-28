@@ -11,8 +11,9 @@ class cl_GUI(QDialog):
         self.cl_config = config_instance
         self.cl_chart = chart_instance
         self.cl_logger = logger_instance
-        
-        self.setWindowTitle("Renko Trader V2 - Robust Connection Mode")
+        self.version = "2.0.0"
+        self.GUI_title = f"Renko Trader v{self.version}"
+        self.setWindowTitle(self.GUI_title)
         self.resize(1100, 700)
 
         # Comm layer (injected later to avoid circular dependency during __init__)
@@ -119,10 +120,10 @@ class cl_GUI(QDialog):
         Callback invoked on every DATA tick received from the EA.
         Logs a concise representation to avoid flooding.
         """
-        tick_time = payload.get("time", "N/A")
-        open_p = payload.get("open", "N/A")
-        close_p = payload.get("close", "N/A")
-        self.cl_logger.append_log(f"[TICK] {tick_time} | O:{open_p} C:{close_p}")
+        tick_tstamp = payload.get("tstamp", "N/A")
+        tick_ask = payload.get("ask", "N/A")
+        tick_bid = payload.get("bid", "N/A")
+        self.cl_logger.append_log(f"[TICK] tstamp: {tick_tstamp} | ask: {tick_ask} bid: {tick_bid}")
 
     @Slot()
     def on_disconnected(self):

@@ -199,19 +199,6 @@ void cl_Controller::func_process_startup_step(cl_RX &obj_RX_arg, cl_TX &obj_TX_a
    //--- STATE: STREAMING ---
    if(en_comm_state_curr == COMM_STATE_STREAMING)
    {
-      // Watchdog only active when TX has been active recently
-      if(ul_last_tx_data_ms > 0 && (ul_now - ul_last_tx_data_ms) <= (ulong)i_inp_watchdog_tx_window_ms)
-      {
-         ulong ul_last_rx_activity = obj_RX_arg.func_ul_last_rx_activity_ms();
-         
-         // RX must have had some activity since we entered streaming (or at least since reconnect)
-         if(ul_last_rx_activity > 0 && (ul_now - ul_last_rx_activity) > (ulong)i_inp_watchdog_rx_timeout_ms)
-         {
-            printf("[CTRL][ERROR] Watchdog triggered: RX silent for %d ms while TX is active. Forcing reconnect.", (int)(ul_now - ul_last_rx_activity));
-            obj_Comm_arg.Disconnect();
-            return;
-         }
-      }
       return;
    }
 }

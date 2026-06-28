@@ -3,7 +3,7 @@
 //+------------------------------------------------------------------+
 
 // Definitions
-#define COMM_MSG_DELIMITER    "\n"
+#define COMM_MSG_DELIMITER    "<FRAME_END>"
 #define RX_STATE_CMD          "CMD"
 #define RX_SIZE_LIMIT         8192
 // Protocol type

@@ -1,9 +1,6 @@
 # comm_network_protocol.py
 # Low-level TCP helpers for the Renko Trader V2 comm layer:
 # newline-delimited JSON receive and raw text send.
-# NOTE: This is the V2 active version. It replaces the reference project's
-# version (send_framed_message / b"\n<FRAME_END>\n") that was accidentally
-# present here and which was incompatible with comm_handler.py.
 
 import socket
 from typing import List, Tuple, Optional, Any
@@ -30,7 +27,7 @@ def recv_messages_with_delimiter(
 
     try:
         chunk = connection.socket.recv(buffer_size)
-
+        
         if chunk is None:
             return messages, False
 
@@ -42,7 +39,7 @@ def recv_messages_with_delimiter(
             connection.rx_buffer = b""
 
         connection.rx_buffer += chunk
-
+        
         # Extract all complete frames currently in the buffer.
         while True:
             idx = connection.rx_buffer.find(delimiter)

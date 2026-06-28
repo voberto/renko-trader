@@ -60,7 +60,7 @@ void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg)
 
    // Check connection and send data
    bool b_connected = obj_Comm_arg.IsConnected();
-   if(b_connected) obj_Comm_arg.SendData(str_TX, false, TX_DATA);
+   if(b_connected) obj_Comm_arg.SendData(str_TX, true, TX_DATA);
    else if(!b_connected) printf("[TX][ERROR] EA is not connected to the server. Can't send data.");
 }
 

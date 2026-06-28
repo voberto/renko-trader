@@ -27,6 +27,10 @@ class cl_GUI(QDialog):
         self._init_ui_controls()
         self._init_ui_visualization()
 
+        # Minimize/maximize buttons
+        self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, True)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
+
     def set_comm_manager(self, comm_manager: cl_CommManager):
         """
         Injects the communication manager and wires button signals.
@@ -120,10 +124,10 @@ class cl_GUI(QDialog):
         Callback invoked on every DATA tick received from the EA.
         Logs a concise representation to avoid flooding.
         """
-        tick_tstamp = payload.get("tstamp", "N/A")
+        #tick_tstamp = payload.get("tstamp", "N/A")
         tick_ask = payload.get("ask", "N/A")
         tick_bid = payload.get("bid", "N/A")
-        self.cl_logger.append_log(f"[TICK] tstamp: {tick_tstamp} | ask: {tick_ask} bid: {tick_bid}")
+        self.cl_logger.append_log(f"[TICK] Ask: {tick_ask} | bid: {tick_bid}")
 
     @Slot()
     def on_disconnected(self):

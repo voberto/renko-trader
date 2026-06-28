@@ -20,7 +20,7 @@ class cl_Logger(QPlainTextEdit):
         """
         Adds a new line to the logger with a timestamp.
         """
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
         full_message = f"[{timestamp}] {message}"
         self.appendPlainText(full_message)
         

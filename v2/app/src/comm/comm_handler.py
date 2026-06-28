@@ -35,6 +35,7 @@ class cl_CommHandler:
         self._on_tick_received = on_tick_received
         self._on_disconnected = on_disconnected
         self._state: str = "WAIT_SYMBOL"
+        self._debug_log = False
 
     def run(self) -> None:
         self._log(f"[{RT_LOG_MODULE}] Handler started — state: {self._state}.")
@@ -63,7 +64,8 @@ class cl_CommHandler:
             return
 
         msg_type = payload.get("type", "")
-        self._log(f"[{RT_LOG_MODULE}] RX type='{msg_type}' | state={self._state}.")
+        if(self._debug_log): 
+            self._log(f"[{RT_LOG_MODULE}] RX type='{msg_type}' | state={self._state}.")
 
         if self._state == "WAIT_SYMBOL":
             self._handle_symbol(msg_type, payload)
@@ -86,9 +88,6 @@ class cl_CommHandler:
             self._on_symbol_received(symbol, payload)
 
         # Send the SYMBOL ACK. RT_ACK_SYMBOL is now a JSON object string
-        # ('{"type": "RX_ACK_SYMBOL"}'). send_raw_text() appends the frame
-        # delimiter (b"\n") exactly once, so the EA receives a single, valid
-        # JSON frame: {"type": "RX_ACK_SYMBOL"}\n
         ok = send_raw_text(self._conn.socket, RT_ACK_SYMBOL)
         if ok:
             self._log(f"[{RT_LOG_MODULE}] ACK_SYMBOL sent ({RT_ACK_SYMBOL}) — WAIT_SYMBOL -> WAIT_HISTORY.")
@@ -109,8 +108,6 @@ class cl_CommHandler:
             self._on_history_received(ticks, payload)
 
         # Send the HISTORY ACK. RT_ACK_HISTORY is now a JSON object string
-        # ('{"type": "RX_ACK_HISTORY"}'). send_raw_text() appends the frame
-        # delimiter (b"\n") exactly once -> {"type": "RX_ACK_HISTORY"}\n
         ok = send_raw_text(self._conn.socket, RT_ACK_HISTORY)
         if ok:
             self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY sent ({RT_ACK_HISTORY}) — WAIT_HISTORY -> STREAMING.")

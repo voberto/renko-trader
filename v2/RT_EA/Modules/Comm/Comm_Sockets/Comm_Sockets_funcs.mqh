@@ -141,7 +141,11 @@ bool cl_Comm_Sockets::Connect(bool b_msg_enabled_arg)
       return(false);
    }
    
-   if(IsConnected())
+   // IMPORTANT: check the underlying socket state (SocketIsConnected), NOT
+   // IsConnected(), which returns m_is_connected — still false at this point.
+   // Using IsConnected() here made Connect() always fall through to return(false),
+   // leaving m_is_connected == false even after a successful SocketConnect().
+   if(SocketIsConnected(m_client_socket))
    {
       m_is_connected = true;
       printf("[COMM_SOCKETS][INFO] Successfully connected to server (IP = %s, port = %d).", m_server_ip, m_server_port);

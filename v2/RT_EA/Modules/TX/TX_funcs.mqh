@@ -42,7 +42,7 @@ cl_TX::~cl_TX(void)
 
 }
 
-//--- Steady-state tick transmission (normal operation) ---
+// Steady-state tick transmission (normal operation)
 void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg)
 {
    // Collect market variables
@@ -64,7 +64,7 @@ void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg)
    else if(!b_connected) printf("[TX][ERROR] EA is not connected to the server. Can't send data.");
 }
 
-//--- Startup Phase 1: announce symbol to app ---
+// Announce symbol to app
 void cl_TX::func_TX_startup_symbol_send(cl_Comm_Sockets &obj_Comm_arg)
 {
    string str_symbol = Symbol();
@@ -75,27 +75,39 @@ void cl_TX::func_TX_startup_symbol_send(cl_Comm_Sockets &obj_Comm_arg)
    string str_TX = obj_JSON.func_str_return() + COMM_MSG_DELIMITER;
 
    bool b_connected = obj_Comm_arg.IsConnected();
-   if(b_connected) obj_Comm_arg.SendData(str_TX, true, TX_SYMBOL);
-   else if(!b_connected) printf("[TX][ERROR] EA is not connected to the server. Can't send SYMBOL.");
+   if(b_connected)
+   {
+      obj_Comm_arg.SendData(str_TX, true, TX_SYMBOL);
+      printf("[TX][INFO] SYMBOL sent. symbol=%s | payload=%d bytes.", str_symbol, StringLen(str_TX));
+   }
+   else printf("[TX][ERROR] EA is not connected to the server. Can't send SYMBOL.");
 }
 
-//--- Startup Phase 3: send tick history for initial chart build ---
+// Send tick history for initial chart build
 void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lookback_ticks_arg)
 {
    MqlTick mqlt_tick_arr[];
+   
+   // Apply security cap
+   int i_effective_lookback = i_lookback_ticks_arg;
+   if(i_effective_lookback > MAX_HISTORY_TICKS_SAFE_CAP)
+   {
+      printf("[TX][WARNING] Requested lookback %d exceeds safe cap %d. Truncating.", i_lookback_ticks_arg, MAX_HISTORY_TICKS_SAFE_CAP);
+      i_effective_lookback = MAX_HISTORY_TICKS_SAFE_CAP;
+   }
 
-   // Copy historical ticks from the terminal (goes backwards from now)
-   int i_copied = CopyTicks(Symbol(), mqlt_tick_arr, COPY_TICKS_ALL, 0, i_lookback_ticks_arg);
+   // Copy historical ticks from the terminal using the effective (capped) lookback
+   int i_copied = CopyTicks(Symbol(), mqlt_tick_arr, COPY_TICKS_ALL, 0, i_effective_lookback);
 
    if(i_copied <= 0)
    {
-      printf("[TX][ERROR] CopyTicks failed. Error = %d, lookback requested = %d.", GetLastError(), i_lookback_ticks_arg);
+      printf("[TX][ERROR] CopyTicks failed. Error = %d, lookback requested = %d.", GetLastError(), i_effective_lookback);
       return;
    }
 
    if(i_copied < i_lookback_ticks_arg)
    {
-      printf("[TX][WARN] Requested %d ticks but only %d available. Sending available amount.", i_lookback_ticks_arg, i_copied);
+      printf("[TX][WARNING] Requested %d ticks but only %d available. Sending available amount.", i_lookback_ticks_arg, i_copied);
    }
 
    // Build JSON payload
@@ -126,8 +138,12 @@ void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lo
    string str_TX = obj_JSON.func_str_return() + COMM_MSG_DELIMITER;
 
    bool b_connected = obj_Comm_arg.IsConnected();
-   if(b_connected) obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
-   else if(!b_connected) printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
+   if(b_connected)
+   {
+      obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
+      printf("[TX][INFO] HISTORY sent. lookback_requested=%d | lookback_sent=%d | payload=%d bytes.", i_lookback_ticks_arg, i_copied, StringLen(str_TX));
+   }
+   else printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
 }
 
 void cl_TX::func_stub()

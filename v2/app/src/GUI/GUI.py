@@ -1,35 +1,78 @@
-from PySide6.QtWidgets import (QDialog, QGridLayout, QLabel, QLineEdit, 
-                               QPushButton, QFrame)
+from PySide6.QtWidgets import (
+    QDialog,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QFrame,
+    QSizePolicy,
+)
 from PySide6.QtCore import Qt, Slot
 
 from src.comm.comm_manager import cl_CommManager
+
+from src.GUI.ui_constants import (
+    WINDOW_TITLE,
+    WINDOW_WIDTH,
+    WINDOW_HEIGHT,
+    LABEL_SYMBOL,
+    LABEL_BRICK_SIZE,
+    SYMBOL_WAITING_TEXT,
+    BUTTON_CONNECT_TEXT,
+    BUTTON_DISCONNECT_TEXT,
+    SYMBOL_FIELD_WIDTH,
+    BRICK_FIELD_WIDTH,
+    TOP_PANEL_HEIGHT,
+    LAYOUT_MARGIN,
+    LAYOUT_SPACING,
+    TOP_FRAME_HORIZONTAL_POLICY,
+    TOP_FRAME_VERTICAL_POLICY,
+    STYLE_FRAME,
+    STYLE_LABEL,
+    STYLE_LINE_EDIT,
+    STYLE_BUTTON_CONNECT,
+    STYLE_BUTTON_DISCONNECT,
+)
 
 
 class cl_GUI(QDialog):
     def __init__(self, config_instance, chart_instance, logger_instance):
         super().__init__()
+
         self.cl_config = config_instance
         self.cl_chart = chart_instance
         self.cl_logger = logger_instance
-        self.version = "2.0.0"
-        self.GUI_title = f"Renko Trader v{self.version}"
-        self.setWindowTitle(self.GUI_title)
-        self.resize(1100, 700)
 
-        # Comm layer (injected later to avoid circular dependency during __init__)
+        # Communication layer (injected after construction)
         self._comm_manager = None
 
-        # Main Layout
-        self.layout_main = QGridLayout()
-        self.setLayout(self.layout_main)
+        # Connection state
+        self._connected = False
 
-        # Setup Sections
+        # GUI initialization
+        self._init_window()
         self._init_ui_controls()
-        self._init_ui_visualization()
+        self._init_chart()
+        self._init_logger()
+        self._init_layout()
 
-        # Minimize/maximize buttons
+    # -------------------------------------------------------------------------
+    # Window Initialization
+    # -------------------------------------------------------------------------
+
+    def _init_window(self):
+        """
+        Initializes the main window properties.
+        """
+        self.setWindowTitle(WINDOW_TITLE)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
+
         self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, True)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
+
+    # -------------------------------------------------------------------------
+    # Communication
+    # -------------------------------------------------------------------------
 
     def set_comm_manager(self, comm_manager: cl_CommManager):
         """
@@ -37,76 +80,153 @@ class cl_GUI(QDialog):
         Called by main.py after both GUI and CommManager are instantiated.
         """
         self._comm_manager = comm_manager
-        self.btn_connect.clicked.connect(self._on_btn_connect_clicked)
-        self.btn_disconnect.clicked.connect(self._on_btn_disconnect_clicked)
 
-    # ------------------------------------------------------------------
-    # UI Construction
-    # ------------------------------------------------------------------
+        self.btn_connect.clicked.connect(self._on_btn_connect_clicked)
+
+    # -------------------------------------------------------------------------
+    # UI Initialization
+    # -------------------------------------------------------------------------
+
+    def _init_window(self):
+        """
+        Initializes the main window properties.
+        """
+        self.setWindowTitle(WINDOW_TITLE)
+        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
+
+        self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, True)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
 
     def _init_ui_controls(self):
         """
-        Initializes the top control panel with Symbol/Brick info and Buttons.
+        Initializes the top control panel.
         """
         self.frame_top = QFrame()
         self.frame_top.setFrameShape(QFrame.StyledPanel)
+        self.frame_top.setStyleSheet(STYLE_FRAME)
+        self.frame_top.setFixedHeight(TOP_PANEL_HEIGHT)
+        self.frame_top.setSizePolicy(
+            QSizePolicy(
+                TOP_FRAME_HORIZONTAL_POLICY,
+                TOP_FRAME_VERTICAL_POLICY,
+            )
+        )
+
         self.layout_top = QGridLayout(self.frame_top)
+        self.layout_top.setContentsMargins(
+            LAYOUT_MARGIN,
+            LAYOUT_MARGIN,
+            LAYOUT_MARGIN,
+            LAYOUT_MARGIN,
+        )
+        self.layout_top.setHorizontalSpacing(LAYOUT_SPACING)
+        self.layout_top.setVerticalSpacing(LAYOUT_SPACING)
 
-        # Symbol Field (Read-only, updated by EA Protocol)
-        self.lbl_symbol = QLabel("Symbol (from EA):")
-        self.edt_symbol = QLineEdit("WAITING...")
+        # Symbol
+        self.lbl_symbol = QLabel(LABEL_SYMBOL)
+        self.lbl_symbol.setStyleSheet(STYLE_LABEL)
+
+        self.edt_symbol = QLineEdit(SYMBOL_WAITING_TEXT)
         self.edt_symbol.setReadOnly(True)
-        self.edt_symbol.setFixedWidth(110)
+        self.edt_symbol.setFixedWidth(SYMBOL_FIELD_WIDTH)
         self.edt_symbol.setAlignment(Qt.AlignCenter)
-        self.edt_symbol.setStyleSheet("background-color: #f0f0f0; font-weight: bold;")
+        self.edt_symbol.setStyleSheet(STYLE_LINE_EDIT)
 
-        # Brick Size Field (Read-only, from config)
-        brick_size_val = str(self.cl_config.get_val("renko", "brick_size", 100))
-        self.lbl_brick = QLabel("Brick Size:")
+        # Brick size
+        brick_size_val = str(
+            self.cl_config.get_val(
+                "renko",
+                "brick_size",
+                100,
+            )
+        )
+
+        self.lbl_brick = QLabel(LABEL_BRICK_SIZE)
+        self.lbl_brick.setStyleSheet(STYLE_LABEL)
+
         self.edt_brick = QLineEdit(brick_size_val)
         self.edt_brick.setReadOnly(True)
-        self.edt_brick.setFixedWidth(80)
+        self.edt_brick.setFixedWidth(BRICK_FIELD_WIDTH)
         self.edt_brick.setAlignment(Qt.AlignCenter)
-        self.edt_brick.setStyleSheet("background-color: #f0f0f0;")
+        self.edt_brick.setStyleSheet(STYLE_LINE_EDIT)
 
-        # Buttons
-        self.btn_connect = QPushButton("CONNECT")
-        self.btn_connect.setStyleSheet(
-            "background-color: #2E7D32; color: white; font-weight: bold; min-width: 100px;"
-        )
-        
-        self.btn_disconnect = QPushButton("DISCONNECT")
-        self.btn_disconnect.setEnabled(False)
-        self.btn_disconnect.setStyleSheet("min-width: 100px;")
+        # Connect/Disconnect toggle button
+        self.btn_connect = QPushButton(BUTTON_CONNECT_TEXT)
+        self.btn_connect.setStyleSheet(STYLE_BUTTON_CONNECT)
 
-        # Assemble Top Layout
+        # Layout assembly
         self.layout_top.addWidget(self.lbl_symbol, 0, 0)
         self.layout_top.addWidget(self.edt_symbol, 0, 1)
-        self.layout_top.addWidget(self.lbl_brick, 0, 2)
-        self.layout_top.addWidget(self.edt_brick, 0, 3)
+        self.layout_top.addWidget(self.lbl_brick,  0, 2)
+        self.layout_top.addWidget(self.edt_brick,  0, 3)
         self.layout_top.addWidget(self.btn_connect, 0, 4)
-        self.layout_top.addWidget(self.btn_disconnect, 0, 5)
 
+    def _init_chart(self):
+        """
+        Initializes the chart section.
+        """
+        pass
+
+    def _init_logger(self):
+        """
+        Initializes the logger section.
+        """
+        pass
+
+    def _init_layout(self):
+        """
+        Builds the main window layout.
+
+        Layout hierarchy:
+
+            +-----------------------------------------+
+            | Controls                                |
+            +-----------------------------------------+
+            | Chart                                   |
+            +-----------------------------------------+
+            | Logger                                  |
+            +-----------------------------------------+
+        """
+        self.layout_main = QGridLayout()
+
+        self.layout_main.setContentsMargins(
+            LAYOUT_MARGIN,
+            LAYOUT_MARGIN,
+            LAYOUT_MARGIN,
+            LAYOUT_MARGIN,
+        )
+
+        self.layout_main.setSpacing(LAYOUT_SPACING)
+
+        # Top controls
         self.layout_main.addWidget(self.frame_top, 0, 0)
 
-    def _init_ui_visualization(self):
-        """
-        Adds Chart and Logger to the main layout.
-        """
-        # Logger
-        self.layout_main.addWidget(self.cl_logger, 1, 0)
-
         # Chart
-        self.layout_main.addWidget(self.cl_chart, 2, 0)
+        self.layout_main.addWidget(self.cl_chart, 1, 0)
 
-    # ------------------------------------------------------------------
-    # Slot / Callback Methods (Invoked by Comm Layer on its thread)
-    # ------------------------------------------------------------------
+        # Logger
+        self.layout_main.addWidget(self.cl_logger, 2, 0)
+
+        #
+        # Stretch factors.
+        # The control panel keeps a fixed height.
+        # The chart receives most of the available space.
+        # The logger grows only slightly.
+        #
+        self.layout_main.setRowStretch(0, 0)
+        self.layout_main.setRowStretch(1, 8)
+        self.layout_main.setRowStretch(2, 2)
+
+        self.setLayout(self.layout_main)
+
+    # -------------------------------------------------------------------------
+    # Slots
+    # -------------------------------------------------------------------------
 
     @Slot(str, dict)
     def on_symbol_received(self, symbol: str, payload: dict):
         """
-        Callback invoked when the EA sends the SYMBOL message during startup.
+        Callback invoked when the EA sends the SYMBOL message.
         """
         self.edt_symbol.setText(symbol)
         self.cl_logger.append_log(f"[APP] Symbol confirmed: {symbol}.")
@@ -114,71 +234,89 @@ class cl_GUI(QDialog):
     @Slot(list, dict)
     def on_history_received(self, ticks: list, payload: dict):
         """
-        Callback invoked when the EA sends the HISTORY message during startup.
+        Callback invoked when the EA sends the HISTORY message.
         """
         self.cl_logger.append_log(f"[APP] History received: {len(ticks)} ticks.")
 
     @Slot(dict)
     def on_tick_received(self, payload: dict):
         """
-        Callback invoked on every DATA tick received from the EA.
-        Logs a concise representation to avoid flooding.
+        Callback invoked when the EA sends a market tick.
         """
-        #tick_tstamp = payload.get("tstamp", "N/A")
         tick_ask = payload.get("ask", "N/A")
         tick_bid = payload.get("bid", "N/A")
-        self.cl_logger.append_log(f"[TICK] Ask: {tick_ask} | bid: {tick_bid}")
+
+        self.cl_logger.append_log(
+            f"[TICK] Ask: {tick_ask} | bid: {tick_bid}"
+        )
 
     @Slot()
     def on_disconnected(self):
         """
-        Callback invoked when the EA closes the connection or an error occurs.
-        Resets UI to the waiting state.
+        Callback invoked when the EA disconnects.
         """
         self.cl_logger.append_log("[APP] EA disconnected.")
-        self.update_ui_on_disconnect()
+        self._set_connection_state(connected=False)
 
-    # ------------------------------------------------------------------
-    # Button Handlers
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # Button Handler
+    # -------------------------------------------------------------------------
 
     def _on_btn_connect_clicked(self):
         """
-        Starts the TCP server and waits for the EA to connect.
+        Toggles the server connection state.
+
+        When disconnected: starts the TCP server and waits for the EA.
+        When connected:    stops the TCP server and closes any active connection.
         """
         if not self._comm_manager:
-            self.cl_logger.append_log("[APP] CommManager not injected — cannot start.")
+            self.cl_logger.append_log(
+                "[APP] CommManager not injected — cannot start."
+            )
             return
 
-        self.cl_logger.append_log("[APP] Starting server...")
-        ok = self._comm_manager.connect()
+        if not self._connected:
+            self.cl_logger.append_log("[APP] Starting server...")
 
-        if ok:
-            self.update_ui_on_connect()
-            self.cl_logger.append_log("[APP] Server started. Waiting for EA...")
+            ok = self._comm_manager.connect()
+
+            if ok:
+                self._set_connection_state(connected=True)
+                self.cl_logger.append_log(
+                    "[APP] Server started. Waiting for EA..."
+                )
+            else:
+                self.cl_logger.append_log(
+                    "[APP] Failed to start server (check if port is in use)."
+                )
         else:
-            self.cl_logger.append_log("[APP] Failed to start server (check if port is in use).")
+            self.cl_logger.append_log("[APP] Stopping server...")
 
-    def _on_btn_disconnect_clicked(self):
+            self._comm_manager.disconnect()
+
+            self._set_connection_state(connected=False)
+
+    # -------------------------------------------------------------------------
+    # UI State
+    # -------------------------------------------------------------------------
+
+    def _set_connection_state(self, connected: bool):
         """
-        Stops the TCP server and closes any active EA connection.
+        Updates all connection-related UI elements to reflect the current state.
+
+        When connected:
+            - Button label becomes DISCONNECT with a red background.
+
+        When disconnected:
+            - Button label becomes CONNECT with a green background.
+            - Symbol field resets to the waiting placeholder.
         """
-        if not self._comm_manager:
-            return
+        self._connected = connected
 
-        self.cl_logger.append_log("[APP] Stopping server...")
-        self._comm_manager.disconnect()
-        self.update_ui_on_disconnect()
-
-    # ------------------------------------------------------------------
-    # UI State Helpers
-    # ------------------------------------------------------------------
-
-    def update_ui_on_connect(self):
-        self.btn_connect.setEnabled(False)
-        self.btn_disconnect.setEnabled(True)
-
-    def update_ui_on_disconnect(self):
-        self.btn_connect.setEnabled(True)
-        self.btn_disconnect.setEnabled(False)
-        self.edt_symbol.setText("WAITING...")
+        if connected:
+            self.btn_connect.setText(BUTTON_DISCONNECT_TEXT)
+            self.btn_connect.setStyleSheet(STYLE_BUTTON_DISCONNECT)
+        else:
+            self.btn_connect.setText(BUTTON_CONNECT_TEXT)
+            self.btn_connect.setStyleSheet(STYLE_BUTTON_CONNECT)
+            self.edt_symbol.setText(SYMBOL_WAITING_TEXT)

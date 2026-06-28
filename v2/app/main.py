@@ -31,7 +31,7 @@ def main():
     bridge.sig_log_message.connect(log_widget.append_log)
 
     # 5. Create CommManager with callbacks that only EMIT signals
-    #    It is safe to emit Qt signals from any thread.
+    # It is safe to emit Qt signals from any thread.
     host = config.get_val("network", "host", "127.0.0.1")
     port = config.get_val("network", "port", 9005)
 

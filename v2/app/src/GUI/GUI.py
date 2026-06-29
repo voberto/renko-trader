@@ -35,6 +35,7 @@ from src.GUI.ui_constants import (
 )
 
 from .candles import cl_CandleEngine
+from .candles_renko import cl_RenkoEngine
 
 
 class cl_GUI(QDialog):
@@ -189,12 +190,14 @@ class cl_GUI(QDialog):
             self.edt_brick.setText(str(brick))
 
         # Instantiate the correct candle engine
-        if candles_type == 0:  # Regular
+        if candles_type == 0: # Regular
             self._candle_engine = cl_CandleEngine(timeframe_sec)
             self.cl_logger.append_log(f"[APP] Startup: {symbol} | Regular | TF: {timeframe_sec}s.")
-        else:                  # Renko — engine pending
-            self._candle_engine = None
-            self.cl_logger.append_log(f"[APP] Startup: {symbol} | Renko (engine pending).")
+        else: # Renko
+            brick_size = payload.get("brick_size", 0)
+            tick_size  = float(payload.get("tick_size", 1))
+            self._candle_engine = cl_RenkoEngine(brick_size, tick_size)
+            self.cl_logger.append_log(f"[APP] Startup: {symbol} | Renko | Brick: {brick_size} pts | Tick size: {tick_size}.")
 
     @Slot(list, dict)
     def on_history_received(self, candles: list, payload: dict):
@@ -202,15 +205,13 @@ class cl_GUI(QDialog):
         Callback invoked when the EA sends the HISTORY message.
         Routes raw candle list through the candle engine, then renders the result.
         """
-        self.cl_logger.append_log(f"[APP] History received: {len(candles)} candles.")
-
         if self._candle_engine is None:
             self.cl_logger.append_log("[APP] No candle engine available — history discarded.")
             return
 
         df = self._candle_engine.process_history(candles)
         self.cl_chart.load_historical_candles(df)
-        self.cl_logger.append_log("[APP] Chart successfully populated with historical candles.")
+        self.cl_logger.append_log(f"[APP] Chart successfully populated with {self._candle_engine.candle_count_hist_get()} historical candles.")
 
     @Slot(dict)
     def on_tick_received(self, payload: dict):
@@ -223,7 +224,9 @@ class cl_GUI(QDialog):
 
         processed_candle = self._candle_engine.process_tick(payload)
 
-        if processed_candle is not None:
+        if isinstance(self._candle_engine, cl_RenkoEngine):
+            self.cl_chart.update_ticks(processed_candle)
+        else:
             self.cl_chart.update_tick(processed_candle)
 
     @Slot()

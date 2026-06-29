@@ -9,6 +9,10 @@ class cl_CandleEngine:
     def __init__(self, timeframe_sec: int):
         self.timeframe_sec: int = timeframe_sec
         self._current_candle: Optional[dict] = None  # Internal OHLC state (time as pd.Timestamp)
+        self._candle_count_hist: int = 0
+
+    def candle_count_hist_get(self):
+        return(self._candle_count_hist)
 
     # -------------------------------------------------------------------------
     # Public — History
@@ -38,6 +42,7 @@ class cl_CandleEngine:
             "close": df["close"].astype(float),
         })
 
+        self._candle_count_hist = len(df["time"].to_list())
         df_out = df_out.sort_values(by="time", ascending=True)
         df_out = df_out.drop_duplicates(subset=["time"], keep="last")
         df_out.reset_index(drop=True, inplace=True)

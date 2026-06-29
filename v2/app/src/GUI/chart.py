@@ -60,6 +60,18 @@ class cl_Chart(CustomChart):
         self._current_candle = series
         self.update(series)
 
+    def update_ticks(self, df: pd.DataFrame) -> None:
+        """
+        Receives a DataFrame of one or more new Renko bricks from cl_RenkoEngine.process_tick()
+        and updates the chart for each brick. No OHLC processing is performed here.
+        """
+        if df is None or df.empty:
+            return
+
+        for _, row in df.iterrows():
+            self._current_candle = row
+            self.update(row)
+
     def chart_clear(self) -> None:
         """
         Clears all series data from the chart screen.

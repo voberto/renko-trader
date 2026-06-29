@@ -14,7 +14,7 @@
 #define RX_ACK_HISTORY        "RX_ACK_HISTORY"
 // Security cap for history payload to avoid 
 // socket buffer overflow (approx 150-200 bytes per tick in JSON)
-#define MAX_HISTORY_TICKS_SAFE_CAP  2000
+#define MAX_HISTORY_TICKS_SAFE_CAP  10000
 
 // Modules
 #include "Modules/Comm/Comm_Sockets/Comm_Sockets_funcs.mqh"

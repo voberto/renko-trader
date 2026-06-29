@@ -17,7 +17,7 @@ class cl_TX
       ~cl_TX(void);
 
       // Steady-state data transmission
-      void func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg);
+      void func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg, bool b_data_print_arg);
 
       // Startup protocol transmissions
       void func_TX_startup_start_send(cl_Comm_Sockets &obj_Comm_arg);
@@ -43,7 +43,7 @@ cl_TX::~cl_TX(void)
 }
 
 // Steady-state tick transmission (normal operation)
-void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg)
+void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg, bool b_data_print_arg)
 {
    // Collect market variables
    d_price_ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
@@ -60,7 +60,7 @@ void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg)
 
    // Check connection and send data
    bool b_connected = obj_Comm_arg.IsConnected();
-   if(b_connected) obj_Comm_arg.SendData(str_TX, true, TX_DATA);
+   if(b_connected) obj_Comm_arg.SendData(str_TX, b_data_print_arg, TX_DATA);
    else if(!b_connected) printf("[TX][ERROR] EA is not connected to the server. Can't send data.");
 }
 
@@ -147,7 +147,7 @@ void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lo
       if(b_connected)
       {
          obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
-         printf("[TX][INFO] HISTORY (ticks) sent. lookback_requested=%d | lookback_sent=%d | payload=%d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
+         printf("[TX][INFO] HISTORY (ticks) sent. lookback_requested = %d | lookback_sent = %d | payload = %d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
       }
       else printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
    }
@@ -213,7 +213,7 @@ void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lo
       if(b_connected)
       {
          obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
-         printf("[TX][INFO] HISTORY (candles) sent. lookback_requested=%d | lookback_sent=%d | payload=%d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
+         printf("[TX][INFO] HISTORY (candles) sent. lookback_requested = %d | lookback_sent = %d | payload = %d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
       }
       else printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
    }

@@ -65,7 +65,7 @@ class cl_CommHandler:
 
         msg_type = payload.get("type", "")
         if(self._debug_log): 
-            self._log(f"[{RT_LOG_MODULE}] RX type='{msg_type}' | state={self._state}.")
+            self._log(f"[{RT_LOG_MODULE}] RX type = '{msg_type}' | state = {self._state}.")
 
         if self._state == "WAIT_START":
             self._handle_start(msg_type, payload)
@@ -84,10 +84,7 @@ class cl_CommHandler:
         symbol = payload.get("symbol", "UNKNOWN")
         candles_type = payload.get("candles_type", 0)
 
-        self._log(
-            f"[{RT_LOG_MODULE}] START received: "
-            f"symbol={symbol}, candles_type={candles_type}."
-        )
+        self._log(f"[{RT_LOG_MODULE}] START received: symbol = {symbol}, candles_type = {candles_type}.")
 
         if self._on_start_received:
             self._on_start_received(payload)
@@ -95,10 +92,7 @@ class cl_CommHandler:
         ok = send_raw_text(self._conn.socket, RT_ACK_START)
 
         if ok:
-            self._log(
-                f"[{RT_LOG_MODULE}] ACK_START sent ({RT_ACK_START}) "
-                f"— WAIT_START -> WAIT_HISTORY."
-            )
+            self._log(f"[{RT_LOG_MODULE}] ACK_START sent ({RT_ACK_START}) — WAIT_START -> WAIT_HISTORY.")
             self._state = "WAIT_HISTORY"
         else:
             self._log(f"[{RT_LOG_MODULE}] ACK_START send failed — closing.")
@@ -148,10 +142,7 @@ class cl_CommHandler:
         ok = send_raw_text(self._conn.socket, RT_ACK_HISTORY)
         
         if ok:
-            self._log(
-                f"[{RT_LOG_MODULE}] ACK_HISTORY sent ({RT_ACK_HISTORY}) "
-                f"— WAIT_HISTORY -> STREAMING."
-            )
+            self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY sent ({RT_ACK_HISTORY}) — WAIT_HISTORY -> STREAMING.")
             self._state = "STREAMING"
         else:
             self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY send failed — closing.")

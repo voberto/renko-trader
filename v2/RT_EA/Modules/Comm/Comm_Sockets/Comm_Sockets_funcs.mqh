@@ -206,8 +206,7 @@ bool cl_Comm_Sockets::SendData(string str_data_arg, bool b_data_print_arg, strin
       }
       else
       {
-         if(b_data_print_arg)       printf("[COMM_SOCKETS][INFO] Sent %s data to server (IP = %s, port = %d) = %s.", str_data_tier_arg, m_server_ip, m_server_port, str_data_arg);
-         else if(!b_data_print_arg) printf("[COMM_SOCKETS][INFO] Sent %s data to server (IP = %s, port = %d).", str_data_tier_arg, m_server_ip, m_server_port);
+         if(b_data_print_arg) printf("[COMM_SOCKETS][INFO] Sent %s data to server (IP = %s, port = %d).", str_data_tier_arg, m_server_ip, m_server_port);
       }
    }
    return true;

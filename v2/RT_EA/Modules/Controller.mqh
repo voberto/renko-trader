@@ -12,6 +12,7 @@ class cl_Controller
       en_Comm_State en_comm_state_curr;
       bool b_startup_sent;
       bool b_history_sent;
+      bool b_data_print;
       
       // Robust startup tracking
       ulong ul_last_startup_send_ms;
@@ -42,6 +43,7 @@ cl_Controller::cl_Controller(void)
    en_comm_state_curr = COMM_STATE_DISCONNECTED;
    b_startup_sent = false;
    b_history_sent = false;
+   b_data_print = false;
    ul_last_startup_send_ms = 0;
    i_startup_retry_count = 0;
    ul_last_tx_data_ms = 0;
@@ -61,6 +63,7 @@ void cl_Controller::func_loop_OnInit(cl_Comm_Sockets &obj_Comm_arg, string str_s
    en_comm_state_curr = COMM_STATE_DISCONNECTED;
    b_startup_sent = false;
    b_history_sent = false;
+   b_data_print = false;
    ul_last_startup_send_ms = 0;
    i_startup_retry_count = 0;
    ul_last_tx_data_ms = 0;
@@ -71,7 +74,7 @@ void cl_Controller::func_loop_OnTick(cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Com
 {
    if(en_comm_state_curr == COMM_STATE_STREAMING)
    {
-      obj_TX_arg.func_TX_data_send(obj_Comm_arg);
+      obj_TX_arg.func_TX_data_send(obj_Comm_arg, b_data_print);
       ul_last_tx_data_ms = GetTickCount64();
    }
 }

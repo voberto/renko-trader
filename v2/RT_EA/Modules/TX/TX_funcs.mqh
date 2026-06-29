@@ -21,7 +21,7 @@ class cl_TX
 
       // Startup protocol transmissions
       void func_TX_startup_symbol_send(cl_Comm_Sockets &obj_Comm_arg);
-      void func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lookback_ticks_arg);
+      void func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lookback_candles_arg);
 
    protected:
       void func_stub();
@@ -83,57 +83,64 @@ void cl_TX::func_TX_startup_symbol_send(cl_Comm_Sockets &obj_Comm_arg)
    else printf("[TX][ERROR] EA is not connected to the server. Can't send SYMBOL.");
 }
 
-// Send tick history for initial chart build
-void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lookback_ticks_arg)
+// Send candle history (bars) for initial chart build instead of ticks
+void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lookback_candles_arg)
 {
-   MqlTick mqlt_tick_arr[];
+   MqlRates rates_arr[];
    
-   // Apply security cap
-   int i_effective_lookback = i_lookback_ticks_arg;
-   if(i_effective_lookback > MAX_HISTORY_TICKS_SAFE_CAP)
+   // Apply security cap for candles (usually smaller than tick cap, e.g., 1000/2000 bars is plenty)
+   int i_effective_lookback = i_lookback_candles_arg;
+   int i_max_candles_cap = 5000; // Safe cap for historical candles structure
+   if(i_effective_lookback > i_max_candles_cap)
    {
-      printf("[TX][WARNING] Requested lookback %d exceeds safe cap %d. Truncating.", i_lookback_ticks_arg, MAX_HISTORY_TICKS_SAFE_CAP);
-      i_effective_lookback = MAX_HISTORY_TICKS_SAFE_CAP;
+      printf("[TX][WARNING] Requested candle lookback %d exceeds safe cap %d. Truncating.", i_lookback_candles_arg, i_max_candles_cap);
+      i_effective_lookback = i_max_candles_cap;
    }
 
-   // Copy historical ticks from the terminal using the effective (capped) lookback
-   int i_copied = CopyTicks(Symbol(), mqlt_tick_arr, COPY_TICKS_ALL, 0, i_effective_lookback);
+   // Copy historical rates (candles) from the terminal
+   // PERIOD_CURRENT uses the timeframe active on the chart where the EA is running
+   int i_copied = CopyRates(Symbol(), PERIOD_CURRENT, 0, i_effective_lookback, rates_arr);
 
    if(i_copied <= 0)
    {
-      printf("[TX][ERROR] CopyTicks failed. Error = %d, lookback requested = %d.", GetLastError(), i_effective_lookback);
+      printf("[TX][ERROR] CopyRates failed. Error = %d, lookback requested = %d.", GetLastError(), i_effective_lookback);
       return;
    }
 
-   if(i_copied < i_lookback_ticks_arg)
+   if(i_copied < i_lookback_candles_arg)
    {
-      printf("[TX][WARNING] Requested %d ticks but only %d available. Sending available amount.", i_lookback_ticks_arg, i_copied);
+      printf("[TX][WARNING] Requested %d candles but only %d available. Sending available amount.", i_lookback_candles_arg, i_copied);
    }
 
    // Build JSON payload
    obj_JSON.func_reset();
    obj_JSON.func_str_add("type", TX_HISTORY);
    obj_JSON.func_str_add("symbol", Symbol());
-   obj_JSON.func_raw_add("lookback_requested", IntegerToString(i_lookback_ticks_arg));
+   obj_JSON.func_raw_add("lookback_requested", IntegerToString(i_lookback_candles_arg));
    obj_JSON.func_raw_add("lookback_sent", IntegerToString(i_copied));
 
-   // Build tick array manually (cl_JSON has no native array builder)
-   string str_tick_array = "[";
+   // Build candles array manually (cl_JSON has no native array builder)
+   string str_candles_array = "[";
    for(int i = 0; i < i_copied; i++)
    {
-      if(i > 0) str_tick_array += ",";
+      if(i > 0) str_candles_array += ",";
 
-      str_tick_array += "{\"tstamp\":";
-      str_tick_array += IntegerToString(mqlt_tick_arr[i].time);
-      str_tick_array += ",\"ask\":";
-      str_tick_array += DoubleToString(mqlt_tick_arr[i].ask, _Digits);
-      str_tick_array += ",\"bid\":";
-      str_tick_array += DoubleToString(mqlt_tick_arr[i].bid, _Digits);
-      str_tick_array += "}";
+      str_candles_array += "{\"time\":";
+      str_candles_array += IntegerToString(rates_arr[i].time);
+      str_candles_array += ",\"open\":";
+      str_candles_array += DoubleToString(rates_arr[i].open, _Digits);
+      str_candles_array += ",\"high\":";
+      str_candles_array += DoubleToString(rates_arr[i].high, _Digits);
+      str_candles_array += ",\"low\":";
+      str_candles_array += DoubleToString(rates_arr[i].low, _Digits);
+      str_candles_array += ",\"close\":";
+      str_candles_array += DoubleToString(rates_arr[i].close, _Digits);
+      str_candles_array += "}";
    }
-   str_tick_array += "]";
+   str_candles_array += "]";
 
-   obj_JSON.func_raw_add("ticks", str_tick_array);
+   // Send as "candles" key instead of "ticks"
+   obj_JSON.func_raw_add("candles", str_candles_array);
 
    string str_TX = obj_JSON.func_str_return() + COMM_MSG_DELIMITER;
 
@@ -141,7 +148,7 @@ void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lo
    if(b_connected)
    {
       obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
-      printf("[TX][INFO] HISTORY sent. lookback_requested=%d | lookback_sent=%d | payload=%d bytes.", i_lookback_ticks_arg, i_copied, StringLen(str_TX));
+      printf("[TX][INFO] HISTORY (candles) sent. lookback_requested=%d | lookback_sent=%d | payload=%d bytes.", i_lookback_candles_arg, i_copied, StringLen(str_TX));
    }
    else printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
 }

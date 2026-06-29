@@ -105,7 +105,7 @@ void cl_Controller::func_process_startup_step(cl_RX &obj_RX_arg, cl_TX &obj_TX_a
    bool b_is_connected = obj_Comm_arg.IsConnected();
    if(!b_is_connected)
    {
-      if(en_comm_state_curr != COMM_STATE_DISCONNECTED) printf("[CTRL][WARNINGING] Disconnected. Resetting startup state.");
+      if(en_comm_state_curr != COMM_STATE_DISCONNECTED) printf("[CTRL][WARNING] Disconnected. Resetting startup state.");
 
       func_reset_startup_state(obj_RX_arg);
       return;
@@ -177,10 +177,10 @@ void cl_Controller::func_process_startup_step(cl_RX &obj_RX_arg, cl_TX &obj_TX_a
          }
          else
          {
-            printf("[CTRL][INFO] Sending HISTORY (first attempt). Lookback = %d ticks.", i_inp_lookback_startup_ticks);
+            printf("[CTRL][INFO] Sending HISTORY (first attempt). Lookback = %d ticks.", i_inp_lookback_startup_candles);
          }
 
-         obj_TX_arg.func_TX_startup_history_send(obj_Comm_arg, i_inp_lookback_startup_ticks);
+         obj_TX_arg.func_TX_startup_history_send(obj_Comm_arg, i_inp_lookback_startup_candles);
          b_history_sent = true;
          ul_last_startup_send_ms = ul_now;
       }

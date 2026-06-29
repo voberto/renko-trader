@@ -33,7 +33,7 @@ input group "--- [1] CONNECTION ---"                  // --- [1] CONNECTION ---
 input string str_inp_host = "127.0.0.1";              // [1.1] Host (IP address)
 input int i_inp_port = 9005;                          // [1.2] Port
 input int i_inp_timer_period_ms = 16;                 // [1.3] Timer period (ms)
-input int i_inp_lookback_startup_ticks = 5000;        // [1.4] Startup lookback (ticks)
+input int i_inp_lookback_startup_candles = 100;       // [1.4] Startup lookback (candles)
 
 input group "--- [2] STARTUP PROTOCOL ---"            // --- [2] STARTUP PROTOCOL ---
 input int i_inp_startup_ack_timeout_ms = 2000;        // [2.1] ACK timeout per startup step (ms)

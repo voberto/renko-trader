@@ -163,3 +163,24 @@ QPushButton:pressed {{
     background-color: {COLOR_DISCONNECT};
 }}
 """
+
+# =============================================================================
+# Chart Visual Styles (TradingView Palette)
+# =============================================================================
+
+COLOR_CHART_BG = "#1A1A1C"
+COLOR_CHART_GRID = "#28282B"
+
+# Candlestick colors
+COLOR_CANDLE_UP_BODY = "#2E7D32"     # Dark Green
+COLOR_CANDLE_UP_WICK = "#388E3C"     # Green Accent
+COLOR_CANDLE_DOWN_BODY = "#B71C1C"   # Dark Red
+COLOR_CANDLE_DOWN_WICK = "#C62828"   # Red Accent
+
+# Volume or accessory lines
+COLOR_CHART_VOLUME_UP = "rgba(46, 125, 50, 0.4)"
+COLOR_CHART_VOLUME_DOWN = "rgba(183, 28, 28, 0.4)"
+
+# Default timeframe (in seconds) used to group ticks
+# 60 = M1, 300 = M5, 900 = M15, 3600 = H1
+DEFAULT_TIMEFRAME_SECONDS = 60

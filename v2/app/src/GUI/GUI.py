@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot
 
 from src.comm.comm_manager import cl_CommManager
-
 from src.GUI.ui_constants import (
     WINDOW_TITLE,
     WINDOW_WIDTH,
@@ -32,6 +31,7 @@ from src.GUI.ui_constants import (
     STYLE_LINE_EDIT,
     STYLE_BUTTON_CONNECT,
     STYLE_BUTTON_DISCONNECT,
+    DEFAULT_TIMEFRAME_SECONDS,
 )
 
 
@@ -56,9 +56,9 @@ class cl_GUI(QDialog):
         self._init_logger()
         self._init_layout()
 
-    # -------------------------------------------------------------------------
+    # ----
     # Window Initialization
-    # -------------------------------------------------------------------------
+    # ----
 
     def _init_window(self):
         """
@@ -70,9 +70,9 @@ class cl_GUI(QDialog):
         self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, True)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
 
-    # -------------------------------------------------------------------------
+    # ----
     # Communication
-    # -------------------------------------------------------------------------
+    # ----
 
     def set_comm_manager(self, comm_manager: cl_CommManager):
         """
@@ -82,20 +82,6 @@ class cl_GUI(QDialog):
         self._comm_manager = comm_manager
 
         self.btn_connect.clicked.connect(self._on_btn_connect_clicked)
-
-    # -------------------------------------------------------------------------
-    # UI Initialization
-    # -------------------------------------------------------------------------
-
-    def _init_window(self):
-        """
-        Initializes the main window properties.
-        """
-        self.setWindowTitle(WINDOW_TITLE)
-        self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
-
-        self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, True)
-        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
 
     def _init_ui_controls(self):
         """
@@ -176,16 +162,6 @@ class cl_GUI(QDialog):
     def _init_layout(self):
         """
         Builds the main window layout.
-
-        Layout hierarchy:
-
-            +-----------------------------------------+
-            | Controls                                |
-            +-----------------------------------------+
-            | Chart                                   |
-            +-----------------------------------------+
-            | Logger                                  |
-            +-----------------------------------------+
         """
         self.layout_main = QGridLayout()
 
@@ -202,26 +178,21 @@ class cl_GUI(QDialog):
         self.layout_main.addWidget(self.frame_top, 0, 0)
 
         # Chart
-        self.layout_main.addWidget(self.cl_chart, 1, 0)
+        self.layout_main.addWidget(self.cl_chart.get_webview(), 1, 0)
 
         # Logger
         self.layout_main.addWidget(self.cl_logger, 2, 0)
 
-        #
-        # Stretch factors.
-        # The control panel keeps a fixed height.
-        # The chart receives most of the available space.
-        # The logger grows only slightly.
-        #
+        # Stretch factors
         self.layout_main.setRowStretch(0, 0)
         self.layout_main.setRowStretch(1, 8)
         self.layout_main.setRowStretch(2, 2)
 
         self.setLayout(self.layout_main)
 
-    # -------------------------------------------------------------------------
+    # ----
     # Slots
-    # -------------------------------------------------------------------------
+    # ----
 
     @Slot(str, dict)
     def on_symbol_received(self, symbol: str, payload: dict):
@@ -232,16 +203,20 @@ class cl_GUI(QDialog):
         self.cl_logger.append_log(f"[APP] Symbol confirmed: {symbol}.")
 
     @Slot(list, dict)
-    def on_history_received(self, ticks: list, payload: dict):
+    def on_history_received(self, candles: list, payload: dict):
         """
         Callback invoked when the EA sends the HISTORY message.
+        Loads historical aggregated candles directly into the chart.
         """
-        self.cl_logger.append_log(f"[APP] History received: {len(ticks)} ticks.")
+        self.cl_logger.append_log(f"[APP] History received: {len(candles)} candles. Populating chart...")
+        self.cl_chart.load_historical_candles(candles)
+        self.cl_logger.append_log("[APP] Chart successfully populated with historical candles.")
 
     @Slot(dict)
     def on_tick_received(self, payload: dict):
         """
         Callback invoked when the EA sends a market tick.
+        Updates the forward-looking bar (current candle) in real-time.
         """
         tick_ask = payload.get("ask", "N/A")
         tick_bid = payload.get("bid", "N/A")
@@ -249,6 +224,12 @@ class cl_GUI(QDialog):
         self.cl_logger.append_log(
             f"[TICK] Ask: {tick_ask} | bid: {tick_bid}"
         )
+        
+        # Load timeframe seconds configuration, fallback to 60 seconds
+        timeframe_secs = self.cl_config.get_val("chart", "timeframe_seconds", DEFAULT_TIMEFRAME_SECONDS)
+        
+        # Feed the real-time tick to the TradingView widget
+        self.cl_chart.update_tick(payload, timeframe_secs)
 
     @Slot()
     def on_disconnected(self):
@@ -258,16 +239,13 @@ class cl_GUI(QDialog):
         self.cl_logger.append_log("[APP] EA disconnected.")
         self._set_connection_state(connected=False)
 
-    # -------------------------------------------------------------------------
+    # ----
     # Button Handler
-    # -------------------------------------------------------------------------
+    # ----
 
     def _on_btn_connect_clicked(self):
         """
         Toggles the server connection state.
-
-        When disconnected: starts the TCP server and waits for the EA.
-        When connected:    stops the TCP server and closes any active connection.
         """
         if not self._comm_manager:
             self.cl_logger.append_log(
@@ -296,20 +274,13 @@ class cl_GUI(QDialog):
 
             self._set_connection_state(connected=False)
 
-    # -------------------------------------------------------------------------
+    # ----
     # UI State
-    # -------------------------------------------------------------------------
+    # ----
 
     def _set_connection_state(self, connected: bool):
         """
         Updates all connection-related UI elements to reflect the current state.
-
-        When connected:
-            - Button label becomes DISCONNECT with a red background.
-
-        When disconnected:
-            - Button label becomes CONNECT with a green background.
-            - Symbol field resets to the waiting placeholder.
         """
         self._connected = connected
 
@@ -320,3 +291,7 @@ class cl_GUI(QDialog):
             self.btn_connect.setText(BUTTON_CONNECT_TEXT)
             self.btn_connect.setStyleSheet(STYLE_BUTTON_CONNECT)
             self.edt_symbol.setText(SYMBOL_WAITING_TEXT)
+            
+            # Reset chart on disconnection
+            self.cl_chart.chart_clear()
+            self.cl_logger.append_log("[APP] Chart cleared on disconnection.")

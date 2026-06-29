@@ -101,11 +101,11 @@ class cl_CommHandler:
             self._log(f"[{RT_LOG_MODULE}] Expected HISTORY, got '{msg_type}' — discarded.")
             return
 
-        ticks = payload.get("ticks", [])
-        self._log(f"[{RT_LOG_MODULE}] HISTORY received: {len(ticks)} ticks.")
+        candles = payload.get("candles", [])
+        self._log(f"[{RT_LOG_MODULE}] HISTORY received: {len(candles)} candles.")
 
         if self._on_history_received:
-            self._on_history_received(ticks, payload)
+            self._on_history_received(candles, payload)
 
         # Send the HISTORY ACK. RT_ACK_HISTORY is now a JSON object string
         ok = send_raw_text(self._conn.socket, RT_ACK_HISTORY)

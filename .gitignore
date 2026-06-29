@@ -174,4 +174,4 @@ cython_debug/
 .pypirc
 
 # Custom
-src/*.txt
+src/v1/*.txt

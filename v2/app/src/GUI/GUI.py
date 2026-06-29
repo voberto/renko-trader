@@ -34,6 +34,8 @@ from src.GUI.ui_constants import (
     DEFAULT_TIMEFRAME_SECONDS,
 )
 
+from .candles import cl_CandleEngine
+
 
 class cl_GUI(QDialog):
     def __init__(self, config_instance, chart_instance, logger_instance):
@@ -48,6 +50,8 @@ class cl_GUI(QDialog):
 
         # Connection state
         self._connected = False
+        self._startup_config = {}
+        self._candle_engine = None
 
         # GUI initialization
         self._init_window()
@@ -167,38 +171,60 @@ class cl_GUI(QDialog):
     # ----
     # Slots
     # ----
+    @Slot(dict)
+    def on_start_received(self, payload: dict):
+        """
+        Callback invoked when the EA sends the TX_START message.
+        Stores the startup config, updates UI fields, and instantiates the candle engine.
+        """
+        self._startup_config = payload
+        symbol       = payload.get("symbol",       "N/A")
+        candles_type = payload.get("candles_type", 0)
+        timeframe_sec = payload.get("timeframe_sec", DEFAULT_TIMEFRAME_SECONDS)
 
-    @Slot(str, dict)
-    def on_symbol_received(self, symbol: str, payload: dict):
-        """
-        Callback invoked when the EA sends the SYMBOL message.
-        """
+        # Update UI fields
         self.edt_symbol.setText(symbol)
-        self.cl_logger.append_log(f"[APP] Symbol confirmed: {symbol}.")
+        if candles_type == 1:  # Renko
+            brick = payload.get("brick_size", "N/A")
+            self.edt_brick.setText(str(brick))
+
+        # Instantiate the correct candle engine
+        if candles_type == 0:  # Regular
+            self._candle_engine = cl_CandleEngine(timeframe_sec)
+            self.cl_logger.append_log(f"[APP] Startup: {symbol} | Regular | TF: {timeframe_sec}s.")
+        else:                  # Renko — engine pending
+            self._candle_engine = None
+            self.cl_logger.append_log(f"[APP] Startup: {symbol} | Renko (engine pending).")
 
     @Slot(list, dict)
     def on_history_received(self, candles: list, payload: dict):
         """
         Callback invoked when the EA sends the HISTORY message.
-        Loads historical aggregated candles directly into the chart.
+        Routes raw candle list through the candle engine, then renders the result.
         """
-        self.cl_logger.append_log(f"[APP] History received: {len(candles)} candles. Populating chart...")
-        self.cl_chart.load_historical_candles(candles)
+        self.cl_logger.append_log(f"[APP] History received: {len(candles)} candles.")
+
+        if self._candle_engine is None:
+            self.cl_logger.append_log("[APP] No candle engine available — history discarded.")
+            return
+
+        df = self._candle_engine.process_history(candles)
+        self.cl_chart.load_historical_candles(df)
         self.cl_logger.append_log("[APP] Chart successfully populated with historical candles.")
 
     @Slot(dict)
     def on_tick_received(self, payload: dict):
         """
         Callback invoked when the EA sends a market tick.
-        Updates the forward-looking bar (current candle) in real-time.
+        Routes the raw tick through the candle engine, then updates the chart.
         """
-        tick_ask = payload.get("ask", "N/A")
-        tick_bid = payload.get("bid", "N/A")
-        self.cl_logger.append_log(f"[TICK] Ask: {tick_ask} | bid: {tick_bid}")
-        # Load timeframe seconds configuration, fallback to 60 seconds
-        timeframe_secs = self.cl_config.get_val("chart", "timeframe_seconds", DEFAULT_TIMEFRAME_SECONDS)
-        # Feed the real-time tick to the TradingView widget
-        self.cl_chart.update_tick(payload, timeframe_secs)
+        if self._candle_engine is None:
+            return
+
+        processed_candle = self._candle_engine.process_tick(payload)
+
+        if processed_candle is not None:
+            self.cl_chart.update_tick(processed_candle)
 
     @Slot()
     def on_disconnected(self):
@@ -253,3 +279,7 @@ class cl_GUI(QDialog):
             # Reset chart on disconnection
             self.cl_chart.chart_clear()
             self.cl_logger.append_log("[APP] Chart cleared on disconnection.")
+
+            self.edt_brick.setText("") # Clear brick size field
+            self._startup_config = {}
+            self._candle_engine = None

@@ -27,7 +27,7 @@ class cl_CommServer:
         host: str = RT_DEFAULT_HOST,
         port: int = RT_DEFAULT_PORT,
         logger_callback: Optional[Callable[[str], None]] = None,
-        on_symbol_received: Optional[Callable] = None,
+        on_start_received: Optional[Callable] = None,
         on_history_received: Optional[Callable] = None,
         on_tick_received: Optional[Callable] = None,
         on_disconnected: Optional[Callable] = None,
@@ -35,7 +35,7 @@ class cl_CommServer:
         self._host = host
         self._port = port
         self._log = logger_callback or (lambda msg: None)
-        self._on_symbol_received = on_symbol_received
+        self._on_start_received = on_start_received
         self._on_history_received = on_history_received
         self._on_tick_received = on_tick_received
         self._on_disconnected = on_disconnected
@@ -135,9 +135,8 @@ class cl_CommServer:
 
             connection = cl_EA_Connection(host=host, port=port, socket=client_socket,)
 
-            handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_symbol_received=self._on_symbol_received,
-                                     on_history_received=self._on_history_received, on_tick_received=self._on_tick_received,
-                                     on_disconnected=self._on_disconnected,)
+            handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_start_received=self._on_start_received, on_history_received=self._on_history_received,
+                                     on_tick_received=self._on_tick_received, on_disconnected=self._on_disconnected,)
 
             self._handler_thread = threading.Thread(target=handler.run, daemon=True, name=f"CommHandler-{host}:{port}",)
             self._handler_thread.start()

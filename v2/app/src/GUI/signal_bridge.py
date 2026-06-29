@@ -11,7 +11,7 @@ class cl_SignalBridge(QObject):
     Lives in the main thread. Sockets emit these signals from worker threads;
     Qt's queued connection automatically marshals execution to the main thread.
     """
-    sig_symbol_received = Signal(str, dict)
+    sig_start_received = Signal(dict)
     sig_history_received = Signal(list, dict)
     sig_tick_received = Signal(dict)
     sig_disconnected = Signal()

@@ -24,7 +24,7 @@ def main():
     bridge = cl_SignalBridge()
 
     # 4. Connect bridge signals to GUI slots (main thread execution guaranteed)
-    bridge.sig_symbol_received.connect(window.on_symbol_received)
+    bridge.sig_start_received.connect(window.on_start_received)
     bridge.sig_history_received.connect(window.on_history_received)
     bridge.sig_tick_received.connect(window.on_tick_received)
     bridge.sig_disconnected.connect(window.on_disconnected)
@@ -37,7 +37,7 @@ def main():
 
     comm_manager = cl_CommManager(host=host, port=port,
         logger_callback=lambda msg: bridge.sig_log_message.emit(msg),
-        on_symbol_received=lambda sym, payload: bridge.sig_symbol_received.emit(sym, payload),
+        on_start_received=lambda payload: bridge.sig_start_received.emit(payload),
         on_history_received=lambda ticks, payload: bridge.sig_history_received.emit(ticks, payload),
         on_tick_received=lambda payload: bridge.sig_tick_received.emit(payload),
         on_disconnected=lambda: bridge.sig_disconnected.emit(),

@@ -12,16 +12,16 @@ RT_POLL_INTERVAL_SECS: float = 0.05
 RT_FRAME_DELIMITER: bytes = b"<FRAME_END>"
 
 # Startup protocol message types (must match EA_vars.mqh TX_* defines exactly)
-RT_MSG_TYPE_SYMBOL: str = "TX_SYMBOL"
+RT_MSG_TYPE_START: str = "TX_START"
 RT_MSG_TYPE_HISTORY: str = "TX_HISTORY"
 RT_MSG_TYPE_DATA: str = "TX_DATA"
 
 # ACK messages sent back to the EA.
 # The EA's RX parser (RX_funcs.mqh) only accepts frames that are valid JSON
 # objects ({...}) and extracts the "type" field. Plain-text ACKs such as
-# "RX_ACK_SYMBOL" are discarded as "Malformed frame", so each ACK must be a
+# "RX_ACK_START" are discarded as "Malformed frame", so each ACK must be a
 # JSON object whose "type" matches the EA_vars.mqh RX_ACK_* defines.
-RT_ACK_SYMBOL: str = '{"type": "RX_ACK_SYMBOL"}'
+RT_ACK_START: str = '{"type": "RX_ACK_START"}'
 RT_ACK_HISTORY: str = '{"type": "RX_ACK_HISTORY"}'
 
 # Logging

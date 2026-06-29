@@ -144,10 +144,10 @@ void cl_RX::func_message_handle(string str_msg_arg)
    {
       // Legacy CMD handling (reserved for steady-state commands from App)
    }
-   else if(str_type == RX_ACK_SYMBOL)
+   else if(str_type == RX_ACK_START)
    {
       b_ack_symbol_received = true;
-      printf("[RX][INFO] Received %s. App confirmed symbol reception.", RX_ACK_SYMBOL);
+      printf("[RX][INFO] Received %s. App confirmed start reception.", RX_ACK_START);
    }
    else if(str_type == RX_ACK_HISTORY)
    {

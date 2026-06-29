@@ -40,7 +40,7 @@ input group "--- [1] CONNECTION ---"                  // --- [1] CONNECTION ---
 input string str_inp_host = "127.0.0.1";              // [1.1] Host (IP address)
 input int i_inp_port = 9005;                          // [1.2] Port
 input int i_inp_timer_period_ms = 16;                 // [1.3] Timer period (ms)
-input int i_inp_lookback_startup_candles = 100;       // [1.4] Startup lookback (candles)
+input int i_inp_lookback_startup_candles = 100;       // [1.4] Startup lookback (candles/ticks)
 
 input group "--- [2] SETUP ---"                       // --- [2] SETUP ---
 input en_candles_type en_inp_ct_curr = en_cd_regular; // [2.1] Candle type

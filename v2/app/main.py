@@ -14,7 +14,7 @@ def main():
 
     # 1. Create UI components
     log_widget = cl_Logger()
-    config = cl_Config(logger_callback=log_widget.append_log)
+    config = cl_Config(logger_callback = log_widget.append_log)
     chart = cl_Chart()
 
     # 2. Initialize GUI
@@ -35,13 +35,12 @@ def main():
     host = config.get_val("network", "host", "127.0.0.1")
     port = config.get_val("network", "port", 9005)
 
-    comm_manager = cl_CommManager(host=host, port=port,
-        logger_callback=lambda msg: bridge.sig_log_message.emit(msg),
-        on_start_received=lambda payload: bridge.sig_start_received.emit(payload),
-        on_history_received=lambda ticks, payload: bridge.sig_history_received.emit(ticks, payload),
-        on_tick_received=lambda payload: bridge.sig_tick_received.emit(payload),
-        on_disconnected=lambda: bridge.sig_disconnected.emit(),
-    )
+    comm_manager = cl_CommManager(host = host, port = port,
+                                  logger_callback = lambda msg: bridge.sig_log_message.emit(msg),
+                                  on_start_received = lambda payload: bridge.sig_start_received.emit(payload),
+                                  on_history_received = lambda ticks, payload: bridge.sig_history_received.emit(ticks, payload),
+                                  on_tick_received = lambda payload: bridge.sig_tick_received.emit(payload),
+                                  on_disconnected = lambda: bridge.sig_disconnected.emit(),)
 
     # 6. Inject CommManager into GUI and wire buttons
     window.set_comm_manager(comm_manager)

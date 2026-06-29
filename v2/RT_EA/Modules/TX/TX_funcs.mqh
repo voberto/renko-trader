@@ -84,7 +84,7 @@ void cl_TX::func_TX_startup_start_send(cl_Comm_Sockets &obj_Comm_arg)
    {
       // Using a generic tag for transmission or updating your TX_SYMBOL constant to TX_START
       obj_Comm_arg.SendData(str_TX, true, "TX_START"); 
-      printf("[TX][INFO] START config sent. symbol = %s | type = %d | payload = %d bytes.", Symbol(), IntegerToString(en_inp_ct_curr), StringLen(str_TX));
+      printf("[TX][INFO] START config sent. Symbol = %s | type = %d | payload = %d bytes.", Symbol(), IntegerToString(en_inp_ct_curr), StringLen(str_TX));
    }
    else printf("[TX][ERROR] EA is not connected to the server. Can't send START config.");
 }
@@ -147,7 +147,7 @@ void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lo
       if(b_connected)
       {
          obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
-         printf("[TX][INFO] HISTORY (ticks) sent. lookback_requested = %d | lookback_sent = %d | payload = %d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
+         printf("[TX][INFO] HISTORY (ticks) sent. Lookback_requested = %d | lookback_sent = %d | payload = %d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
       }
       else printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
    }
@@ -213,7 +213,7 @@ void cl_TX::func_TX_startup_history_send(cl_Comm_Sockets &obj_Comm_arg, int i_lo
       if(b_connected)
       {
          obj_Comm_arg.SendData(str_TX, true, TX_HISTORY);
-         printf("[TX][INFO] HISTORY (candles) sent. lookback_requested = %d | lookback_sent = %d | payload = %d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
+         printf("[TX][INFO] HISTORY (candles) sent. Lookback_requested = %d | lookback_sent = %d | payload = %d bytes.", i_lookback_arg, i_copied, StringLen(str_TX));
       }
       else printf("[TX][ERROR] EA is not connected to the server. Can't send HISTORY.");
    }

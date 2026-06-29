@@ -16,7 +16,7 @@ class cl_Controller
       
       // Robust startup tracking
       ulong ul_last_startup_send_ms;
-      int   i_startup_retry_count;
+      int i_startup_retry_count;
       
       // Watchdog: last TX_DATA timestamp
       ulong ul_last_tx_data_ms;
@@ -25,8 +25,8 @@ class cl_Controller
       cl_Controller(void);
       ~cl_Controller(void);
       void func_loop_OnInit(cl_Comm_Sockets &obj_Comm_arg, string str_server_ip_arg, int i_server_port_arg, 
-                    bool b_comm_period_enabled_arg, string str_comm_tstamp_start_arg, string str_comm_tstamp_end_arg,
-                    int i_timer_period_ms_arg);
+                            bool b_comm_period_enabled_arg, string str_comm_tstamp_start_arg, string str_comm_tstamp_end_arg,
+                            int i_timer_period_ms_arg);
       void func_loop_OnTick(cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg);
       void func_loop_OnDeinit();
       void func_loop_OnTimer(cl_RX &obj_RX_arg, cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg);
@@ -56,8 +56,8 @@ cl_Controller::~cl_Controller(void)
 }
 
 void cl_Controller::func_loop_OnInit(cl_Comm_Sockets &obj_Comm_arg, string str_server_ip_arg, int i_server_port_arg, 
-                    bool b_comm_period_enabled_arg, string str_comm_tstamp_start_arg, string str_comm_tstamp_end_arg,
-                    int i_timer_period_ms_arg)
+                                     bool b_comm_period_enabled_arg, string str_comm_tstamp_start_arg, string str_comm_tstamp_end_arg,
+                                     int i_timer_period_ms_arg)
 {
    obj_Comm_arg.func_obj_init(str_server_ip_arg, i_server_port_arg, b_comm_period_enabled_arg, str_comm_tstamp_start_arg, str_comm_tstamp_end_arg);
    en_comm_state_curr = COMM_STATE_DISCONNECTED;
@@ -88,7 +88,7 @@ void cl_Controller::func_loop_OnDeinit()
 void cl_Controller::func_log_state_transition(en_Comm_State en_from_arg, en_Comm_State en_to_arg)
 {
    string str_names[] = {"DISCONNECTED", "WAIT_SYMBOL_ACK", "WAIT_HISTORY_ACK", "STREAMING"};
-   printf("[CTRL][STATE] %s -> %s", str_names[en_from_arg], str_names[en_to_arg]);
+   printf("[CTRL][STATE] %s -> %s.", str_names[en_from_arg], str_names[en_to_arg]);
 }
 
 void cl_Controller::func_reset_startup_state(cl_RX &obj_RX_arg)

@@ -179,15 +179,14 @@ class cl_GUI(QDialog):
         Stores the startup config, updates UI fields, and instantiates the candle engine.
         """
         self._startup_config = payload
-        symbol       = payload.get("symbol",       "N/A")
+        symbol = payload.get("symbol", "N/A")
         candles_type = payload.get("candles_type", 0)
         timeframe_sec = payload.get("timeframe_sec", DEFAULT_TIMEFRAME_SECONDS)
 
         # Update UI fields
         self.edt_symbol.setText(symbol)
-        if candles_type == 1:  # Renko
-            brick = payload.get("brick_size", "N/A")
-            self.edt_brick.setText(str(brick))
+        brick = payload.get("brick_size", "N/A")
+        self.edt_brick.setText(str(brick))
 
         # Instantiate the correct candle engine
         if candles_type == 0: # Regular

@@ -20,9 +20,6 @@ class CustomChart(QtChart):
         return df
 
     def set(self, df: Optional[pd.DataFrame] = None, keep_drawings=False):
-        """
-        Versão customizada de set que utiliza o nosso _df_datetime_format corrigido
-        """
         if df is None or df.empty:
             self.run_script(f'{self.id}.series.setData([])')
             self.run_script(f'{self.id}.volumeSeries.setData([])')

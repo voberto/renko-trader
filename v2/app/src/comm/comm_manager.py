@@ -24,15 +24,8 @@ class cl_CommManager:
         on_tick_received: Optional[Callable] = None,
         on_disconnected: Optional[Callable] = None,
     ):
-        self._server = cl_CommServer(
-            host=host,
-            port=port,
-            logger_callback=logger_callback,
-            on_symbol_received=on_symbol_received,
-            on_history_received=on_history_received,
-            on_tick_received=on_tick_received,
-            on_disconnected=on_disconnected,
-        )
+        self._server = cl_CommServer(host=host, port=port, logger_callback=logger_callback, on_symbol_received=on_symbol_received,
+                                     on_history_received=on_history_received, on_tick_received=on_tick_received, on_disconnected=on_disconnected,)
 
     def connect(self) -> bool:
         """

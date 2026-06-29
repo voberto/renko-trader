@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import QPlainTextEdit
-from PySide6.QtCore import Qt  # noqa: F401
 from datetime import datetime
 
 class cl_Logger(QPlainTextEdit):

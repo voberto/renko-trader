@@ -22,10 +22,8 @@ class cl_Chart(CustomChart):
     def __init__(self):
         # QtChart manages its own QWebEngineView widget
         super().__init__()
-        
         # Track the active candle to allow correct real-time update logic
         self._current_candle = None # dict with 'time', 'open', 'high', 'low', 'close'
-        
         # Configure dark theme styling on the TradingView chart widget
         self.apply_theme()
 
@@ -34,27 +32,13 @@ class cl_Chart(CustomChart):
         Applies a consistent dark theme matching the TradingView style.
         """
         # Chart background and text
-        self.layout(
-            background_color=COLOR_CHART_BG,
-            text_color="#8F9092",
-        )
-        
+        self.layout(background_color=COLOR_CHART_BG, text_color="#8F9092",)
         # Grid lines using the correct color parameter
-        self.grid(
-            vert_enabled=True,
-            horz_enabled=True,
-            color=COLOR_CHART_GRID,
-        )
-        
+        self.grid(vert_enabled=True, horz_enabled=True, color=COLOR_CHART_GRID,)
         # Candlestick styling
-        self.candle_style(
-            up_color=COLOR_CANDLE_UP_BODY,
-            down_color=COLOR_CANDLE_DOWN_BODY,
-            border_up_color=COLOR_CANDLE_UP_BODY,
-            border_down_color=COLOR_CANDLE_DOWN_BODY,
-            wick_up_color=COLOR_CANDLE_UP_WICK,
-            wick_down_color=COLOR_CANDLE_DOWN_WICK,
-        )
+        self.candle_style(up_color=COLOR_CANDLE_UP_BODY, down_color=COLOR_CANDLE_DOWN_BODY,
+                          border_up_color=COLOR_CANDLE_UP_BODY, border_down_color=COLOR_CANDLE_DOWN_BODY,
+                          wick_up_color=COLOR_CANDLE_UP_WICK, wick_down_color=COLOR_CANDLE_DOWN_WICK,)
 
     def ticks_to_candles(self, ticks: list, timeframe_secs: int = 60) -> pd.DataFrame:
         """

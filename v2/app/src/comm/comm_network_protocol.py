@@ -1,6 +1,5 @@
 # comm_network_protocol.py
-# Low-level TCP helpers for the Renko Trader V2 comm layer:
-# newline-delimited JSON receive and raw text send.
+# Low-level TCP helpers for the Renko Trader V2 comm layer
 
 import socket
 from typing import List, Tuple, Optional, Any
@@ -9,12 +8,8 @@ from .comm_constants import RT_FRAME_DELIMITER, RT_DEFAULT_BUFFER_SIZE
 from .comm_connection_model import cl_EA_Connection
 
 
-def recv_messages_with_delimiter(
-    connection: cl_EA_Connection,
-    buffer_size: int = RT_DEFAULT_BUFFER_SIZE,
-    delimiter: bytes = RT_FRAME_DELIMITER,
-    logger: Optional[Any] = None,
-) -> Tuple[List[str], bool]:
+def recv_messages_with_delimiter(connection: cl_EA_Connection, buffer_size: int = RT_DEFAULT_BUFFER_SIZE,
+                                 delimiter: bytes = RT_FRAME_DELIMITER, logger: Optional[Any] = None,) -> Tuple[List[str], bool]:
     """
     Read from the socket, accumulate into rx_buffer, and extract complete frames
     split by the newline delimiter (NDJSON protocol matching the EA).
@@ -69,14 +64,9 @@ def recv_messages_with_delimiter(
         return messages, True
 
 
-def send_raw_text(
-    sock: socket.socket,
-    text: str,
-    delimiter: bytes = RT_FRAME_DELIMITER,
-    logger: Optional[Any] = None,
-) -> bool:
+def send_raw_text(sock: socket.socket, text: str, delimiter: bytes = RT_FRAME_DELIMITER, logger: Optional[Any] = None,) -> bool:
     """
-    Send a UTF-8 encoded text message followed by exactly one newline delimiter.
+    Send a UTF-8 encoded text message.
     Used for ACKs and any steady-state text the App sends back to the EA.
     """
     try:

@@ -50,7 +50,6 @@ class cl_CommServer:
     # -------------------------------------------------------------------------
     # Public API
     # -------------------------------------------------------------------------
-
     def start(self) -> bool:
         """
         Bind and start listening. Spawns the accept loop in a daemon thread.
@@ -62,51 +61,28 @@ class cl_CommServer:
                 return False
 
             try:
-                self._server_socket = socket.socket(
-                    socket.AF_INET,
-                    socket.SOCK_STREAM,
-                )
-                self._server_socket.setsockopt(
-                    socket.SOL_SOCKET,
-                    socket.SO_REUSEADDR,
-                    1,
-                )
+                self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM,)
+                self._server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1,)
                 self._server_socket.bind((self._host, self._port))
                 self._server_socket.listen(RT_ACCEPT_BACKLOG)
                 self._running = True
             except Exception as e:
-                self._log(
-                    f"[{RT_LOG_MODULE}] Bind error on "
-                    f"{self._host}:{self._port}: {e}."
-                )
+                self._log(f"[{RT_LOG_MODULE}] Bind error on " f"{self._host}:{self._port}: {e}.")
                 return False
 
-        self._log(
-            f"[{RT_LOG_MODULE}] Listening on "
-            f"{self._host}:{self._port} — waiting for EA."
-        )
+        self._log(f"[{RT_LOG_MODULE}] Listening on " f"{self._host}:{self._port} — waiting for EA.")
 
-        self._accept_thread = threading.Thread(
-            target=self._accept_loop,
-            daemon=True,
-            name="CommServer-Accept",
-        )
+        self._accept_thread = threading.Thread(target=self._accept_loop, daemon=True, name="CommServer-Accept",)
         self._accept_thread.start()
         return True
 
     def stop(self) -> None:
         """
         Stop the server: close the listening socket and any active EA connection.
-
-        Closing the active client socket causes the handler's recv() to return
-        b"", which terminates the handler loop cleanly without requiring any
-        additional signalling mechanism.
         """
         with self._lock:
             if not self._running:
-                self._log(
-                    f"[{RT_LOG_MODULE}] Server stop requested but not running."
-                )
+                self._log(f"[{RT_LOG_MODULE}] Server stop requested but not running.")
                 return
             self._running = False
 
@@ -139,7 +115,6 @@ class cl_CommServer:
     # -------------------------------------------------------------------------
     # Internal
     # -------------------------------------------------------------------------
-
     def _accept_loop(self) -> None:
         """
         Blocks on accept(). For each incoming connection, spawns a handler thread.
@@ -158,24 +133,11 @@ class cl_CommServer:
             with self._lock:
                 self._active_client_socket = client_socket
 
-            connection = cl_EA_Connection(
-                host=host,
-                port=port,
-                socket=client_socket,
-            )
+            connection = cl_EA_Connection(host=host, port=port, socket=client_socket,)
 
-            handler = cl_CommHandler(
-                connection=connection,
-                logger_callback=self._log,
-                on_symbol_received=self._on_symbol_received,
-                on_history_received=self._on_history_received,
-                on_tick_received=self._on_tick_received,
-                on_disconnected=self._on_disconnected,
-            )
+            handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_symbol_received=self._on_symbol_received,
+                                     on_history_received=self._on_history_received, on_tick_received=self._on_tick_received,
+                                     on_disconnected=self._on_disconnected,)
 
-            self._handler_thread = threading.Thread(
-                target=handler.run,
-                daemon=True,
-                name=f"CommHandler-{host}:{port}",
-            )
+            self._handler_thread = threading.Thread(target=handler.run, daemon=True, name=f"CommHandler-{host}:{port}",)
             self._handler_thread.start()

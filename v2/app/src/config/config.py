@@ -4,7 +4,7 @@ import os
 class cl_Config:
     def __init__(self, logger_callback=None):
         """
-        :param logger_callback: Optional function to log messages during initialization.
+        Optional function to log messages during initialization.
         """
         self.dic_config = {}
         self._load_config(logger_callback)

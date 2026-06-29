@@ -91,20 +91,10 @@ class cl_GUI(QDialog):
         self.frame_top.setFrameShape(QFrame.StyledPanel)
         self.frame_top.setStyleSheet(STYLE_FRAME)
         self.frame_top.setFixedHeight(TOP_PANEL_HEIGHT)
-        self.frame_top.setSizePolicy(
-            QSizePolicy(
-                TOP_FRAME_HORIZONTAL_POLICY,
-                TOP_FRAME_VERTICAL_POLICY,
-            )
-        )
+        self.frame_top.setSizePolicy(QSizePolicy(TOP_FRAME_HORIZONTAL_POLICY, TOP_FRAME_VERTICAL_POLICY,))
 
         self.layout_top = QGridLayout(self.frame_top)
-        self.layout_top.setContentsMargins(
-            LAYOUT_MARGIN,
-            LAYOUT_MARGIN,
-            LAYOUT_MARGIN,
-            LAYOUT_MARGIN,
-        )
+        self.layout_top.setContentsMargins(LAYOUT_MARGIN, LAYOUT_MARGIN, LAYOUT_MARGIN, LAYOUT_MARGIN,)
         self.layout_top.setHorizontalSpacing(LAYOUT_SPACING)
         self.layout_top.setVerticalSpacing(LAYOUT_SPACING)
 
@@ -119,13 +109,7 @@ class cl_GUI(QDialog):
         self.edt_symbol.setStyleSheet(STYLE_LINE_EDIT)
 
         # Brick size
-        brick_size_val = str(
-            self.cl_config.get_val(
-                "renko",
-                "brick_size",
-                100,
-            )
-        )
+        brick_size_val = str(self.cl_config.get_val("renko", "brick_size", 100,))
 
         self.lbl_brick = QLabel(LABEL_BRICK_SIZE)
         self.lbl_brick.setStyleSheet(STYLE_LABEL)
@@ -165,29 +149,19 @@ class cl_GUI(QDialog):
         """
         self.layout_main = QGridLayout()
 
-        self.layout_main.setContentsMargins(
-            LAYOUT_MARGIN,
-            LAYOUT_MARGIN,
-            LAYOUT_MARGIN,
-            LAYOUT_MARGIN,
-        )
+        self.layout_main.setContentsMargins(LAYOUT_MARGIN, LAYOUT_MARGIN, LAYOUT_MARGIN, LAYOUT_MARGIN,)
 
         self.layout_main.setSpacing(LAYOUT_SPACING)
-
         # Top controls
         self.layout_main.addWidget(self.frame_top, 0, 0)
-
         # Chart
         self.layout_main.addWidget(self.cl_chart.get_webview(), 1, 0)
-
         # Logger
         self.layout_main.addWidget(self.cl_logger, 2, 0)
-
         # Stretch factors
         self.layout_main.setRowStretch(0, 0)
         self.layout_main.setRowStretch(1, 8)
         self.layout_main.setRowStretch(2, 2)
-
         self.setLayout(self.layout_main)
 
     # ----
@@ -220,14 +194,9 @@ class cl_GUI(QDialog):
         """
         tick_ask = payload.get("ask", "N/A")
         tick_bid = payload.get("bid", "N/A")
-
-        self.cl_logger.append_log(
-            f"[TICK] Ask: {tick_ask} | bid: {tick_bid}"
-        )
-        
+        self.cl_logger.append_log(f"[TICK] Ask: {tick_ask} | bid: {tick_bid}")
         # Load timeframe seconds configuration, fallback to 60 seconds
         timeframe_secs = self.cl_config.get_val("chart", "timeframe_seconds", DEFAULT_TIMEFRAME_SECONDS)
-        
         # Feed the real-time tick to the TradingView widget
         self.cl_chart.update_tick(payload, timeframe_secs)
 
@@ -242,42 +211,31 @@ class cl_GUI(QDialog):
     # ----
     # Button Handler
     # ----
-
     def _on_btn_connect_clicked(self):
         """
         Toggles the server connection state.
         """
         if not self._comm_manager:
-            self.cl_logger.append_log(
-                "[APP] CommManager not injected — cannot start."
-            )
+            self.cl_logger.append_log("[APP] CommManager not injected — cannot start.")
             return
 
         if not self._connected:
             self.cl_logger.append_log("[APP] Starting server...")
 
             ok = self._comm_manager.connect()
-
             if ok:
                 self._set_connection_state(connected=True)
-                self.cl_logger.append_log(
-                    "[APP] Server started. Waiting for EA..."
-                )
+                self.cl_logger.append_log("[APP] Server started. Waiting for EA...")
             else:
-                self.cl_logger.append_log(
-                    "[APP] Failed to start server (check if port is in use)."
-                )
+                self.cl_logger.append_log("[APP] Failed to start server (check if port is in use).")
         else:
             self.cl_logger.append_log("[APP] Stopping server...")
-
             self._comm_manager.disconnect()
-
             self._set_connection_state(connected=False)
 
     # ----
     # UI State
     # ----
-
     def _set_connection_state(self, connected: bool):
         """
         Updates all connection-related UI elements to reflect the current state.

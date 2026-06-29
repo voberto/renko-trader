@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 class cl_EA_Connection:
     """
     Represents the active EA TCP connection.
-    Mirrors the reference project model for consistency.
     """
     host: str
     port: int

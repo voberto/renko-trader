@@ -1,0 +1,10 @@
+{
+    "IND_MA": {
+        "ID": 2,
+        "name": "MA_002",
+        "enabled": true,
+        "period": 5,
+        "price_applied": "price_weighted",
+        "color": "rgba(17, 226, 54, 0.8)"
+    }
+}

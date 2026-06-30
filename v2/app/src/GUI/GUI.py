@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot
 
+import os
+
 from src.comm.comm_manager import cl_CommManager
 from src.GUI.ui_constants import (
     WINDOW_TITLE,
@@ -36,6 +38,11 @@ from src.GUI.ui_constants import (
 
 from .candles import cl_CandleEngine
 from .candles_renko import cl_RenkoEngine
+from src.indicators import build_indicator_engine
+
+
+# Absolute path to src/indicators/ — computed once at import time.
+_INDICATORS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indicators")
 
 
 class cl_GUI(QDialog):
@@ -53,6 +60,8 @@ class cl_GUI(QDialog):
         self._connected = False
         self._startup_config = {}
         self._candle_engine = None
+        self._ind_engine = None
+        self._last_regular_candle = None   # tracks last seen candle for close detection
 
         # GUI initialization
         self._init_window()
@@ -176,7 +185,8 @@ class cl_GUI(QDialog):
     def on_start_received(self, payload: dict):
         """
         Callback invoked when the EA sends the TX_START message.
-        Stores the startup config, updates UI fields, and instantiates the candle engine.
+        Stores the startup config, updates UI fields, instantiates the candle
+        engine and the indicator engine.
         """
         self._startup_config = payload
         symbol = payload.get("symbol", "N/A")
@@ -198,11 +208,16 @@ class cl_GUI(QDialog):
             self._candle_engine = cl_RenkoEngine(brick_size, tick_size)
             self.cl_logger.append_log(f"[APP] Startup: {symbol} | Renko | Brick: {brick_size} pts | Tick size: {tick_size}.")
 
+        # Instantiate and load the indicator engine
+        self._ind_engine = build_indicator_engine(self.cl_logger.append_log)
+        self._ind_engine.discover_and_load(_INDICATORS_DIR)
+
     @Slot(list, dict)
     def on_history_received(self, candles: list, payload: dict):
         """
         Callback invoked when the EA sends the HISTORY message.
-        Routes raw candle list through the candle engine, then renders the result.
+        Routes raw candle list through the candle engine, renders the result,
+        then initialises indicator lines and feeds them historical data.
         """
         if self._candle_engine is None:
             self.cl_logger.append_log("[APP] No candle engine available — history discarded.")
@@ -212,11 +227,32 @@ class cl_GUI(QDialog):
         self.cl_chart.load_historical_candles(df)
         self.cl_logger.append_log(f"[APP] Chart successfully populated with {self._candle_engine.candle_count_hist_get()} historical candles.")
 
+        # Seed last regular candle for close detection on subsequent ticks
+        if not isinstance(self._candle_engine, cl_RenkoEngine) and not df.empty:
+            self._last_regular_candle = df.iloc[-1].copy()
+
+        # Indicators — skip if no indicators loaded or history is empty
+        if self._ind_engine is None or self._ind_engine.is_empty() or df.empty:
+            return
+
+        # Create a line series on the chart for each registered indicator
+        for name in self._ind_engine.registered_names():
+            color = self._ind_engine.get_color(name)
+            self.cl_chart.create_indicator_line(name, color)
+
+        # Compute and render historical indicator values
+        ind_results = self._ind_engine.process_history(df)
+        for name, df_ind in ind_results.items():
+            count = len(df_ind) if df_ind is not None else 0
+            self.cl_chart.load_indicator_history(name, df_ind)
+            self.cl_logger.append_log(f"[APP] Indicator '{name}' history loaded: {count} point(s).")
+
     @Slot(dict)
     def on_tick_received(self, payload: dict):
         """
         Callback invoked when the EA sends a market tick.
-        Routes the raw tick through the candle engine, then updates the chart.
+        Routes the raw tick through the candle engine, then updates the chart
+        and all indicator lines.
         """
         if self._candle_engine is None:
             return
@@ -224,9 +260,53 @@ class cl_GUI(QDialog):
         processed_candle = self._candle_engine.process_tick(payload)
 
         if isinstance(self._candle_engine, cl_RenkoEngine):
-            self.cl_chart.update_ticks(processed_candle)
+            self._handle_tick_renko(processed_candle)
         else:
-            self.cl_chart.update_tick(processed_candle)
+            self._handle_tick_regular(processed_candle)
+
+    def _handle_tick_regular(self, series) -> None:
+        """
+        Updates the chart for every tick, but updates indicators only when
+        the regular candle closes.
+
+        For regular candles, cl_CandleEngine.process_tick() returns the
+        currently open candle on every tick. A candle is considered closed
+        only when the incoming tick belongs to a new candle timestamp.
+        """
+        self.cl_chart.update_tick(series)
+
+        if series is None:
+            return
+
+        prev = self._last_regular_candle
+        self._last_regular_candle = series.copy()
+
+        if self._ind_engine is None or self._ind_engine.is_empty():
+            return
+
+        # Only feed indicators when the candle time advances.
+        # The previous candle is now closed.
+        if prev is None or series["time"] == prev["time"]:
+            return
+
+        ind_results = self._ind_engine.process_tick(prev)
+        for name, ind_series in ind_results.items():
+            self.cl_chart.update_indicator(name, ind_series)
+
+    def _handle_tick_renko(self, df_bricks) -> None:
+        """Updates the chart and indicators for one or more completed Renko bricks."""
+        self.cl_chart.update_ticks(df_bricks)
+
+        if df_bricks is None or df_bricks.empty:
+            return
+        if self._ind_engine is None or self._ind_engine.is_empty():
+            return
+
+        # Update indicators for each completed brick individually
+        for _, brick in df_bricks.iterrows():
+            ind_results = self._ind_engine.process_tick(brick)
+            for name, ind_series in ind_results.items():
+                self.cl_chart.update_indicator(name, ind_series)
 
     @Slot()
     def on_disconnected(self):
@@ -277,7 +357,7 @@ class cl_GUI(QDialog):
             self.btn_connect.setText(BUTTON_CONNECT_TEXT)
             self.btn_connect.setStyleSheet(STYLE_BUTTON_CONNECT)
             self.edt_symbol.setText(SYMBOL_WAITING_TEXT)
-            
+
             # Reset chart on disconnection
             self.cl_chart.chart_clear()
             self.cl_logger.append_log("[APP] Chart cleared on disconnection.")
@@ -285,3 +365,5 @@ class cl_GUI(QDialog):
             self.edt_brick.setText("") # Clear brick size field
             self._startup_config = {}
             self._candle_engine = None
+            self._ind_engine = None
+            self._last_regular_candle = None

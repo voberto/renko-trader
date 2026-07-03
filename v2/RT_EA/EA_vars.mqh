@@ -3,21 +3,21 @@
 //+------------------------------------------------------------------+
 
 // Definitions
-#define COMM_MSG_DELIMITER    "<FRAME_END>"
-#define RX_STATE_CMD          "CMD"
-#define RX_SIZE_LIMIT         8192
-// Protocol type
-#define TX_START              "TX_START"
-#define TX_HISTORY            "TX_HISTORY"
-#define TX_DATA               "TX_DATA"
-#define RX_ACK_START          "RX_ACK_START"
-#define RX_ACK_HISTORY        "RX_ACK_HISTORY"
-// Security cap for history payload to avoid 
-// socket buffer overflow (approx 150-200 bytes per tick in JSON)
+#define COMM_MSG_DELIMITER          "<FRAME_END>"
+#define RX_STATE_CMD                "CMD"
+#define RX_SIZE_LIMIT               200
 #define MAX_HISTORY_TICKS_SAFE_CAP  10000
-
-#define SIG_TYPE_LONG         "LONG_OPEN"
-#define SIG_TYPE_SHORT        "SHORT_OPEN"
+// Protocol type
+#define TX_START                    "TX_START"
+#define TX_HISTORY                  "TX_HISTORY"
+#define TX_DATA                     "TX_DATA"
+#define RX_ACK_START                "RX_ACK_START"
+#define RX_ACK_HISTORY              "RX_ACK_HISTORY"
+#define TX_HISTORY_META             "TX_HISTORY_META"
+#define RX_ACK_HISTORY_BLOCK        "RX_ACK_HISTORY_BLOCK"
+#define HISTORY_CHUNK_SIZE          RX_SIZE_LIMIT
+#define SIG_TYPE_LONG               "LONG_OPEN"
+#define SIG_TYPE_SHORT              "SHORT_OPEN"
 
 // Modules
 #include "Modules/Comm/Comm_Sockets/Comm_Sockets_funcs.mqh"
@@ -27,6 +27,7 @@ enum en_Comm_State
 {
    COMM_STATE_DISCONNECTED,
    COMM_STATE_WAIT_START_ACK,
+   COMM_STATE_WAIT_HISTORY_BLOCK_ACK,
    COMM_STATE_WAIT_HISTORY_ACK,
    COMM_STATE_STREAMING,
 };

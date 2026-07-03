@@ -11,7 +11,9 @@ class cl_Controller
    private:
       en_Comm_State en_comm_state_curr;
       bool b_startup_sent;
-      bool b_history_sent;
+      bool b_history_meta_sent;    // TX_HISTORY_META was sent
+      int  i_history_chunk_curr;   // Current chunk seq being awaited (1-based)
+      int  i_history_chunks_total; // Total chunks computed at META send time
       bool b_data_print;
       
       // Robust startup tracking
@@ -42,7 +44,9 @@ cl_Controller::cl_Controller(void)
 {
    en_comm_state_curr = COMM_STATE_DISCONNECTED;
    b_startup_sent = false;
-   b_history_sent = false;
+   b_history_meta_sent = false;
+   i_history_chunk_curr = 0;
+   i_history_chunks_total = 0;
    b_data_print = false;
    ul_last_startup_send_ms = 0;
    i_startup_retry_count = 0;
@@ -62,7 +66,9 @@ void cl_Controller::func_loop_OnInit(cl_Comm_Sockets &obj_Comm_arg, string str_s
    obj_Comm_arg.func_obj_init(str_server_ip_arg, i_server_port_arg, b_comm_period_enabled_arg, str_comm_tstamp_start_arg, str_comm_tstamp_end_arg);
    en_comm_state_curr = COMM_STATE_DISCONNECTED;
    b_startup_sent = false;
-   b_history_sent = false;
+   b_history_meta_sent = false;
+   i_history_chunk_curr = 0;
+   i_history_chunks_total = 0;
    b_data_print = false;
    ul_last_startup_send_ms = 0;
    i_startup_retry_count = 0;
@@ -87,14 +93,16 @@ void cl_Controller::func_loop_OnDeinit()
 // State transition logger
 void cl_Controller::func_log_state_transition(en_Comm_State en_from_arg, en_Comm_State en_to_arg)
 {
-   string str_names[] = {"DISCONNECTED", "WAIT_SYMBOL_ACK", "WAIT_HISTORY_ACK", "STREAMING"};
+   string str_names[] = {"DISCONNECTED", "WAIT_START_ACK", "WAIT_HISTORY_BLOCK_ACK", "WAIT_HISTORY_ACK", "STREAMING"};
    printf("[CTRL][STATE] %s -> %s.", str_names[en_from_arg], str_names[en_to_arg]);
 }
 
 void cl_Controller::func_reset_startup_state(cl_RX &obj_RX_arg)
 {
    b_startup_sent = false;
-   b_history_sent = false;
+   b_history_meta_sent = false;
+   i_history_chunk_curr = 0;
+   i_history_chunks_total = 0;
    ul_last_startup_send_ms = 0;
    i_startup_retry_count = 0;
    ul_last_tx_data_ms = 0;
@@ -154,43 +162,79 @@ void cl_Controller::func_process_startup_step(cl_RX &obj_RX_arg, cl_TX &obj_TX_a
       {
          i_startup_retry_count = 0;
          ul_last_startup_send_ms = 0;
-         func_log_state_transition(COMM_STATE_WAIT_START_ACK, COMM_STATE_WAIT_HISTORY_ACK);
-         en_comm_state_curr = COMM_STATE_WAIT_HISTORY_ACK;
+         func_log_state_transition(COMM_STATE_WAIT_START_ACK, COMM_STATE_WAIT_HISTORY_BLOCK_ACK);
+         en_comm_state_curr = COMM_STATE_WAIT_HISTORY_BLOCK_ACK;
       }
       return;
    }
 
+   //--- STATE: WAIT_HISTORY_BLOCK_ACK ---
+   // Sends TX_HISTORY_META once, then iterates through chunks one per timer cycle.
+   // Each chunk waits for RX_ACK_HISTORY_BLOCK with the expected seq number.
+   // On timeout, forces transition to STREAMING with whatever chunks were received.
+   if(en_comm_state_curr == COMM_STATE_WAIT_HISTORY_BLOCK_ACK)
+   {
+      // Step 1: Send META + first chunk (executed once on entry)
+      if(!b_history_meta_sent)
+      {
+         i_history_chunks_total = obj_TX_arg.func_TX_history_meta_send(obj_Comm_arg, i_inp_lookback_startup_candles);
+         obj_TX_arg.func_TX_history_chunk_send(obj_Comm_arg, 1, i_inp_lookback_startup_candles);
+         i_history_chunk_curr = 1;
+         b_history_meta_sent = true;
+         ul_last_startup_send_ms = ul_now;
+         return;
+      }
+ 
+      // Step 2: Timeout guard — force STREAMING with partial data
+      bool b_block_timeout = (ul_now - ul_last_startup_send_ms) > (ulong)i_inp_startup_ack_timeout_ms;
+      if(b_block_timeout)
+      {
+         printf("[CTRL][WARNING] HISTORY BLOCK ACK timeout at chunk %d/%d. Forcing STREAMING with partial history.", i_history_chunk_curr, i_history_chunks_total);
+         func_log_state_transition(COMM_STATE_WAIT_HISTORY_BLOCK_ACK, COMM_STATE_STREAMING);
+         en_comm_state_curr = COMM_STATE_STREAMING;
+         return;
+      }
+ 
+      // Step 3: Check if ACK for the current chunk arrived
+      if(obj_RX_arg.func_b_ack_history_block_received(i_history_chunk_curr))
+      {
+         int i_progress = (int)MathRound((double)i_history_chunk_curr / i_history_chunks_total * 100.0);
+         if(i_history_chunk_curr < i_history_chunks_total) printf("[CTRL][INFO] Sent %d%% of tick history...", i_progress);
+         else printf("[CTRL][INFO] Sent 100%% of tick history.");
+ 
+         i_history_chunk_curr++;
+         ul_last_startup_send_ms = ul_now;
+ 
+         if(i_history_chunk_curr > i_history_chunks_total)
+         {
+            // All chunks acknowledged — wait for final App ACK
+            func_log_state_transition(COMM_STATE_WAIT_HISTORY_BLOCK_ACK, COMM_STATE_WAIT_HISTORY_ACK);
+            en_comm_state_curr = COMM_STATE_WAIT_HISTORY_ACK;
+            return;
+         }
+ 
+         // Send next chunk
+         obj_TX_arg.func_TX_history_chunk_send(obj_Comm_arg, i_history_chunk_curr, i_inp_lookback_startup_candles);
+      }
+      return;
+   }
+ 
    //--- STATE: WAIT_HISTORY_ACK ---
+   // All chunks were sent and acknowledged. Now waits for the App's final
+   // RX_ACK_HISTORY, which signals it has finished processing the full history.
    if(en_comm_state_curr == COMM_STATE_WAIT_HISTORY_ACK)
    {
       bool b_timeout = (ul_now - ul_last_startup_send_ms) > (ulong)i_inp_startup_ack_timeout_ms;
-      
-      if(!b_history_sent || b_timeout)
+      if(b_timeout)
       {
-         if(b_history_sent)
-         {
-            i_startup_retry_count++;
-            if(i_startup_retry_count > i_inp_startup_max_retries)
-            {
-               printf("[CTRL][ERROR] Max retries reached for HISTORY ACK. Resetting connection.");
-               obj_Comm_arg.Disconnect();
-               return;
-            }
-            printf("[CTRL][WARNING] HISTORY ACK timeout. Retrying %d/%d...", i_startup_retry_count, i_inp_startup_max_retries);
-         }
-         else
-         {
-            printf("[CTRL][INFO] Sending HISTORY (first attempt). Lookback = %d ticks.", i_inp_lookback_startup_candles);
-         }
-
-         obj_TX_arg.func_TX_startup_history_send(obj_Comm_arg, i_inp_lookback_startup_candles);
-         b_history_sent = true;
-         ul_last_startup_send_ms = ul_now;
+         printf("[CTRL][WARNING] Final HISTORY ACK timeout. Forcing STREAMING.");
+         func_log_state_transition(COMM_STATE_WAIT_HISTORY_ACK, COMM_STATE_STREAMING);
+         en_comm_state_curr = COMM_STATE_STREAMING;
+         return;
       }
-
+ 
       if(obj_RX_arg.func_b_ack_history_received())
       {
-         i_startup_retry_count = 0;
          ul_last_startup_send_ms = 0;
          func_log_state_transition(COMM_STATE_WAIT_HISTORY_ACK, COMM_STATE_STREAMING);
          en_comm_state_curr = COMM_STATE_STREAMING;

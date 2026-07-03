@@ -21,6 +21,9 @@ class cl_RX
       // RX activity watchdog
       ulong ul_last_rx_activity_ms;
 
+      bool b_ack_history_block_received;  // Set when RX_ACK_HISTORY_BLOCK arrives
+      int  i_ack_history_block_seq;       // seq value carried in the last block ACK
+
    public:
       // Constructor and destructor
       cl_RX(void);
@@ -30,6 +33,7 @@ class cl_RX
       // Startup protocol state getters
       bool func_b_ack_symbol_received(void) const;
       bool func_b_ack_history_received(void) const;
+      bool func_b_ack_history_block_received(int i_expected_seq_arg);
       void func_reset_startup_acks(void);
       void func_reset_session_state(void);
       
@@ -54,6 +58,8 @@ cl_RX::cl_RX(void)
    b_ack_history_received = false;
    ul_last_reconnect_attempt_ms = 0;
    ul_last_rx_activity_ms = 0;
+   b_ack_history_block_received = false;
+   i_ack_history_block_seq = 0;
 }
 
 // Destructor
@@ -162,6 +168,12 @@ void cl_RX::func_message_handle(string str_msg_arg, cl_Positions &obj_Positions_
       b_ack_history_received = true;
       printf("[RX][INFO] Received %s. App is ready for streaming ticks.", RX_ACK_HISTORY);
    }
+   else if(str_type == RX_ACK_HISTORY_BLOCK)
+   {
+      i_ack_history_block_seq = (int)StringToInteger(func_str_field_extract(str_msg_arg, "seq"));
+      b_ack_history_block_received = true;
+      printf("[RX][INFO] Received %s. Sequence = %d.", RX_ACK_HISTORY_BLOCK, i_ack_history_block_seq);
+   }
    else
    {
       printf("[RX][WARNING] Unknown message type '%s'. Ignored.", str_type);
@@ -179,11 +191,26 @@ bool cl_RX::func_b_ack_history_received(void) const
    return b_ack_history_received;
 }
 
+// Returns true if RX_ACK_HISTORY_BLOCK was received for the expected seq.
+// Consumes the flag so subsequent calls return false until the next block ACK arrives.
+bool cl_RX::func_b_ack_history_block_received(int i_expected_seq_arg)
+{
+   if(b_ack_history_block_received && i_ack_history_block_seq == i_expected_seq_arg)
+   {
+      b_ack_history_block_received = false;
+      i_ack_history_block_seq = 0;
+      return true;
+   }
+   return false;
+}
+
 // Reset startup flags (called on reconnect or EA restart)
 void cl_RX::func_reset_startup_acks(void)
 {
    b_ack_symbol_received = false;
    b_ack_history_received = false;
+   b_ack_history_block_received = false;
+   i_ack_history_block_seq = 0;
 }
 
 void cl_RX::func_reset_session_state(void)

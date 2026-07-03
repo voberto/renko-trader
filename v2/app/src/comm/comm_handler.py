@@ -9,9 +9,11 @@ from .comm_constants import (
     RT_POLL_INTERVAL_SECS,
     RT_MSG_TYPE_START,
     RT_MSG_TYPE_HISTORY,
+    RT_MSG_TYPE_HISTORY_META,
     RT_MSG_TYPE_DATA,
     RT_ACK_START,
     RT_ACK_HISTORY,
+    RT_ACK_HISTORY_BLOCK_BASE,
     RT_LOG_MODULE,
     TX_CMD_BASE,
 )
@@ -37,6 +39,12 @@ class cl_CommHandler:
         self._on_disconnected = on_disconnected
         self._state: str = "WAIT_START"
         self._debug_log = False
+
+        # Chunked history accumulator
+        self._history_chunks_total: int = 0
+        self._history_chunks_received: int = 0
+        self._history_accumulator: list = []
+        self._history_data_key: str = ""   # "ticks" or "candles"
 
     def run(self) -> None:
         self._log(f"[{RT_LOG_MODULE}] Handler started — state: {self._state}.")
@@ -72,6 +80,8 @@ class cl_CommHandler:
             self._handle_start(msg_type, payload)
         elif self._state == "WAIT_HISTORY":
             self._handle_history(msg_type, payload)
+        elif self._state == "WAIT_HISTORY_CHUNKS":
+            self._handle_history_chunk(msg_type, payload)
         elif self._state == "STREAMING":
             self._handle_data(msg_type, payload)
         else:
@@ -100,30 +110,75 @@ class cl_CommHandler:
             self._conn.active = False
 
     def _handle_history(self, msg_type: str, payload: dict) -> None:
-        if msg_type != RT_MSG_TYPE_HISTORY:
-            self._log(f"[{RT_LOG_MODULE}] Expected HISTORY, got '{msg_type}' — discarded.")
+        # In the chunked protocol, WAIT_HISTORY state receives TX_HISTORY_META first,
+        # then transitions to WAIT_HISTORY_CHUNKS for the actual data chunks.
+        if msg_type != RT_MSG_TYPE_HISTORY_META:
+            self._log(f"[{RT_LOG_MODULE}] Expected HISTORY_META, got '{msg_type}' — discarded.")
             return
 
-        # Extract data based on availability (EA now sends either 'candles' or 'ticks')
-        history_data = payload.get("candles")
-        if history_data is None:
-            history_data = payload.get("ticks", [])
-            data_type = "ticks"
-        else:
-            data_type = "candles"
+        self._history_chunks_total = int(payload.get("chunks_total", 1))
+        self._history_chunks_received = 0
+        self._history_accumulator = []
+        self._history_data_key = ""
+        ticks_total = int(payload.get("ticks_total", 0))
+        chunk_size  = int(payload.get("chunk_size", 0))
 
-        count = len(history_data)
-        self._log(f"[{RT_LOG_MODULE}] HISTORY received: {count} {data_type}.")
+        self._log(
+            f"[{RT_LOG_MODULE}] HISTORY_META received: "
+            f"ticks_total = {ticks_total} | chunk_size = {chunk_size} | "
+            f"chunks_total = {self._history_chunks_total}. "
+            f"Transitioning to WAIT_HISTORY_CHUNKS."
+        )
+        self._state = "WAIT_HISTORY_CHUNKS"
+
+    def _handle_history_chunk(self, msg_type: str, payload: dict) -> None:
+        if msg_type != RT_MSG_TYPE_HISTORY:
+            self._log(f"[{RT_LOG_MODULE}] Expected HISTORY chunk, got '{msg_type}' — discarded.")
+            return
+
+        seq = int(payload.get("seq", 0))
+
+        # Detect data key on first chunk
+        if not self._history_data_key:
+            self._history_data_key = "ticks" if "ticks" in payload else "candles"
+
+        chunk_data: list = payload.get(self._history_data_key, [])
+        self._history_accumulator.extend(chunk_data)
+        self._history_chunks_received += 1
+
+        self._log(
+            f"[{RT_LOG_MODULE}] HISTORY chunk {seq}/{self._history_chunks_total} received. "
+            f"Items in chunk = {len(chunk_data)} | accumulated = {len(self._history_accumulator)}."
+        )
+
+        # ACK this block
+        ack = RT_ACK_HISTORY_BLOCK_BASE % seq
+        ok = send_raw_text(self._conn.socket, ack)
+        if not ok:
+            self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY_BLOCK seq={seq} send failed — closing.")
+            self._conn.active = False
+            return
+
+        # Check if all chunks received
+        if seq >= self._history_chunks_total:
+            self._finalise_history(payload)
+
+    def _finalise_history(self, last_payload: dict) -> None:
+        # Chunks arrived most-recent-first — reverse to restore chronological order
+        self._history_accumulator.reverse()
+
+        count = len(self._history_accumulator)
+        self._log(
+            f"[{RT_LOG_MODULE}] All {self._history_chunks_total} chunk(s) received. "
+            f"Total items = {count}. Firing on_history_received callback."
+        )
 
         if self._on_history_received:
-            # We pass the list (candles or ticks) as the primary argument
-            self._on_history_received(history_data, payload)
+            self._on_history_received(self._history_accumulator, last_payload)
 
-        # FIX: Send the ACK and TRANSITION the state to STREAMING
         ok = send_raw_text(self._conn.socket, RT_ACK_HISTORY)
-        
         if ok:
-            self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY sent ({RT_ACK_HISTORY}) — WAIT_HISTORY -> STREAMING.")
+            self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY sent — WAIT_HISTORY_CHUNKS -> STREAMING.")
             self._state = "STREAMING"
         else:
             self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY send failed — closing.")

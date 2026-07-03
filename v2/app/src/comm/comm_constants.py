@@ -14,6 +14,7 @@ RT_FRAME_DELIMITER: bytes = b"<FRAME_END>"
 # Startup protocol message types (must match EA_vars.mqh TX_* defines exactly)
 RT_MSG_TYPE_START: str = "TX_START"
 RT_MSG_TYPE_HISTORY: str = "TX_HISTORY"
+RT_MSG_TYPE_HISTORY_META: str = "TX_HISTORY_META"
 RT_MSG_TYPE_DATA: str = "TX_DATA"
 
 # ACK messages sent back to the EA.
@@ -23,6 +24,7 @@ RT_MSG_TYPE_DATA: str = "TX_DATA"
 # JSON object whose "type" matches the EA_vars.mqh RX_ACK_* defines.
 RT_ACK_START: str = '{"type": "RX_ACK_START"}'
 RT_ACK_HISTORY: str = '{"type": "RX_ACK_HISTORY"}'
+RT_ACK_HISTORY_BLOCK_BASE: str = '{"type": "RX_ACK_HISTORY_BLOCK", "seq": %d}'
 
 TX_CMD_BASE: str = '{"type": "CMD"}'
 

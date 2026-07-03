@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot
 
 import os
+import pandas as pd
 
 from src.comm.comm_manager import cl_CommManager
 from src.GUI.ui_constants import (
@@ -39,10 +40,13 @@ from src.GUI.ui_constants import (
 from .candles import cl_CandleEngine
 from .candles_renko import cl_RenkoEngine
 from src.indicators import build_indicator_engine
+from src.strategy.strategy import cl_StrategyManager
 
 
 # Absolute path to src/indicators/ — computed once at import time.
-_INDICATORS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indicators")
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_INDICATORS_DIR = os.path.join(_BASE_DIR, "indicators")
+_STRATEGY_DIR = os.path.join(_BASE_DIR, "strategy")
 
 
 class cl_GUI(QDialog):
@@ -55,6 +59,9 @@ class cl_GUI(QDialog):
 
         # Communication layer (injected after construction)
         self._comm_manager = None
+
+        # Strategy Layer
+        self._strategy_manager = cl_StrategyManager(self.cl_logger.append_log)
 
         # Connection state
         self._connected = False
@@ -181,6 +188,20 @@ class cl_GUI(QDialog):
     # ----
     # Slots
     # ----
+
+    @Slot(dict)
+    def on_strategy_signal(self, payload: dict):
+        """
+        Callback invoked when a strategy generates a signal.
+        """
+        sig_type = payload.get("type", "N/A")
+        name = payload.get("name", "N/A")
+        price = payload.get("price", 0.0)
+        time = payload.get("time", "N/A")
+        
+        log_msg = f"[STRAT][SIGNAL] {name} | {sig_type} @ {price} | Time: {time}"
+        self.cl_logger.append_log(log_msg)
+
     @Slot(dict)
     def on_start_received(self, payload: dict):
         """
@@ -211,6 +232,10 @@ class cl_GUI(QDialog):
         # Instantiate and load the indicator engine
         self._ind_engine = build_indicator_engine(self.cl_logger.append_log)
         self._ind_engine.discover_and_load(_INDICATORS_DIR)
+        
+        # Instantiate and load strategies based on active indicators
+        active_inds = self._ind_engine.get_active_configs()
+        self._strategy_manager.discover_and_load(_STRATEGY_DIR, active_inds)
 
     @Slot(list, dict)
     def on_history_received(self, candles: list, payload: dict):
@@ -247,6 +272,9 @@ class cl_GUI(QDialog):
             self.cl_chart.load_indicator_history(name, df_ind)
             self.cl_logger.append_log(f"[APP] Indicator '{name}' history loaded: {count} point(s).")
 
+        # Strategy warmup
+        self._strategy_manager.warmup_all(df, ind_results)
+
     @Slot(dict)
     def on_tick_received(self, payload: dict):
         """
@@ -264,10 +292,10 @@ class cl_GUI(QDialog):
         else:
             self._handle_tick_regular(processed_candle)
 
-    def _handle_tick_regular(self, series) -> None:
+    def _handle_tick_regular(self, series: pd.Series) -> None:
         """
-        Updates the chart for every tick, but updates indicators only when
-        the regular candle closes.
+        Updates the chart for every tick, but updates indicators and strategies 
+        only when the regular candle closes.
 
         For regular candles, cl_CandleEngine.process_tick() returns the
         currently open candle on every tick. A candle is considered closed
@@ -284,16 +312,20 @@ class cl_GUI(QDialog):
         if self._ind_engine is None or self._ind_engine.is_empty():
             return
 
-        # Only feed indicators when the candle time advances.
+        # Only feed indicators and strategy when the candle time advances.
         # The previous candle is now closed.
-        if prev is None or series["time"] == prev["time"]:
-            return
+        if prev is not None and series["time"] != prev["time"]:
+            # 1. Update indicators for the closed candle
+            ind_results = self._ind_engine.process_tick(prev)
+            for name, ind_series in ind_results.items():
+                self.cl_chart.update_indicator(name, ind_series)
+            
+            # 2. Run strategies on the closed candle
+            signals = self._strategy_manager.execute(prev, ind_results)
+            for sig in signals:
+                self.on_strategy_signal(sig)
 
-        ind_results = self._ind_engine.process_tick(prev)
-        for name, ind_series in ind_results.items():
-            self.cl_chart.update_indicator(name, ind_series)
-
-    def _handle_tick_renko(self, df_bricks) -> None:
+    def _handle_tick_renko(self, df_bricks: pd.DataFrame) -> None:
         """Updates the chart and indicators for one or more completed Renko bricks."""
         self.cl_chart.update_ticks(df_bricks)
 
@@ -302,11 +334,17 @@ class cl_GUI(QDialog):
         if self._ind_engine is None or self._ind_engine.is_empty():
             return
 
-        # Update indicators for each completed brick individually
+        # Update indicators and run strategies for each completed brick individually
         for _, brick in df_bricks.iterrows():
+            # 1. Update indicators
             ind_results = self._ind_engine.process_tick(brick)
             for name, ind_series in ind_results.items():
                 self.cl_chart.update_indicator(name, ind_series)
+            
+            # 2. Run strategies
+            signals = self._strategy_manager.execute(brick, ind_results)
+            for sig in signals:
+                self.on_strategy_signal(sig)
 
     @Slot()
     def on_disconnected(self):

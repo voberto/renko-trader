@@ -29,6 +29,9 @@ def main():
     bridge.sig_tick_received.connect(window.on_tick_received)
     bridge.sig_disconnected.connect(window.on_disconnected)
     bridge.sig_log_message.connect(log_widget.append_log)
+    
+    # Connect the new strategy signal to the GUI handler
+    bridge.sig_strategy_signal.connect(window.on_strategy_signal)
 
     # 5. Create CommManager with callbacks that only EMIT signals
     # It is safe to emit Qt signals from any thread.
@@ -36,11 +39,11 @@ def main():
     port = config.get_val("network", "port", 9005)
 
     comm_manager = cl_CommManager(host = host, port = port,
-                                  logger_callback = lambda msg: bridge.sig_log_message.emit(msg),
-                                  on_start_received = lambda payload: bridge.sig_start_received.emit(payload),
-                                  on_history_received = lambda ticks, payload: bridge.sig_history_received.emit(ticks, payload),
-                                  on_tick_received = lambda payload: bridge.sig_tick_received.emit(payload),
-                                  on_disconnected = lambda: bridge.sig_disconnected.emit(),)
+                    logger_callback = lambda msg: bridge.sig_log_message.emit(msg),
+                    on_start_received = lambda payload: bridge.sig_start_received.emit(payload),
+                    on_history_received = lambda ticks, payload: bridge.sig_history_received.emit(ticks, payload),
+                    on_tick_received = lambda payload: bridge.sig_tick_received.emit(payload),
+                    on_disconnected = lambda: bridge.sig_disconnected.emit(),)
 
     # 6. Inject CommManager into GUI and wire buttons
     window.set_comm_manager(comm_manager)

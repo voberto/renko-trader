@@ -32,9 +32,9 @@ class cl_IndicatorEngine:
         # {name: {"instance": ..., "ind_id": int, "type": str}}
         self._registry: dict[str, dict] = {}
 
-    # -----------------------------------------------------------------------
+    # ----
     # Descriptor Registration
-    # -----------------------------------------------------------------------
+    # ----
 
     def register_descriptor(self, descriptor: dict) -> None:
         """
@@ -42,7 +42,7 @@ class cl_IndicatorEngine:
         Must be called (via indicators/__init__.py) before discover_and_load().
 
         Parameters
-        ----------
+        ----
         descriptor : dict
             Must contain keys: type_key, required_fields, optional_fields,
             validate, factory, summary.
@@ -51,9 +51,9 @@ class cl_IndicatorEngine:
         self._descriptors[type_key] = descriptor
         self._log(f"[{IND_LOG_MODULE}] Descriptor registered: '{type_key}'.")
 
-    # -----------------------------------------------------------------------
+    # ----
     # Discovery & Loading
-    # -----------------------------------------------------------------------
+    # ----
 
     def discover_and_load(self, indicators_dir: str) -> None:
         """
@@ -62,7 +62,7 @@ class cl_IndicatorEngine:
         config against the corresponding descriptor, and registers valid indicators.
 
         Parameters
-        ----------
+        ----
         indicators_dir : str
             Absolute or relative path to the src/indicators/ directory.
         """
@@ -214,6 +214,7 @@ class cl_IndicatorEngine:
             "instance": instance,
             "ind_id":   ind_id,
             "type":     type_key,
+            "config":   raw # Store full raw JSON for binding lookups
         }
         summary = descriptor["summary"](cfg)
         self._log(
@@ -221,21 +222,21 @@ class cl_IndicatorEngine:
             f"{type_key} '{ind_name}' (ID={ind_id}, {summary}) loaded."
         )
 
-    # -----------------------------------------------------------------------
+    # ----
     # Processing
-    # -----------------------------------------------------------------------
+    # ----
 
     def process_history(self, df: pd.DataFrame) -> dict[str, pd.DataFrame]:
         """
         Runs process_history() on every registered indicator.
 
         Parameters
-        ----------
+        ----
         df : pd.DataFrame
             Full historical candle DataFrame (columns: time, open, high, low, close).
 
         Returns
-        -------
+        ----
         dict mapping indicator name → pd.DataFrame with columns 'time' and 'value'.
         """
         results: dict[str, pd.DataFrame] = {}
@@ -253,12 +254,12 @@ class cl_IndicatorEngine:
         is completed.
 
         Parameters
-        ----------
+        ----
         brick : pd.Series
             Completed candle with fields: time, open, high, low, close.
 
         Returns
-        -------
+        ----
         dict mapping indicator name → pd.Series with fields 'time' and 'value',
         or None if the indicator returned None.
         """
@@ -271,9 +272,9 @@ class cl_IndicatorEngine:
                 results[name] = None
         return results
 
-    # -----------------------------------------------------------------------
+    # ----
     # Accessors (used by cl_GUI for chart line setup)
-    # -----------------------------------------------------------------------
+    # ----
 
     def get_color(self, name: str) -> Optional[str]:
         """Returns the color string for the given indicator name, or None if not found."""
@@ -289,3 +290,10 @@ class cl_IndicatorEngine:
     def is_empty(self) -> bool:
         """Returns True if no indicators are registered."""
         return len(self._registry) == 0
+
+    def get_active_configs(self) -> list[dict]:
+        """
+        Returns a list of all raw configurations for currently loaded indicators.
+        Used by the StrategyManager to perform binding based on indicator parameters.
+        """
+        return [entry["config"] for entry in self._registry.values()]

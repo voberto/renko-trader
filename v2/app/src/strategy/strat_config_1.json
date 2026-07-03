@@ -1,0 +1,28 @@
+{
+    "MAC": {
+        "ID": 1,
+        "name": "Moving Average Crossover",
+        "class_name": "cl_StrategyMAC",
+        "description": "Standard crossover strategy between a fast and a slow moving average.",
+        "enabled": true,
+        "required_indicators": [
+            {
+                "role": "MA_fast",
+                "type": "IND_MA",
+                "params": {
+                    "period": 9
+                }
+            },
+            {
+                "role": "MA_slow",
+                "type": "IND_MA",
+                "params": {
+                    "period": 21
+                }
+            }
+        ],
+        "params": {
+            "min_lookback": 2
+        }
+    }
+}

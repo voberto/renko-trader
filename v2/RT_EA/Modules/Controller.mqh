@@ -4,7 +4,7 @@
 
 #include "RX/RX_funcs.mqh"
 #include "TX/TX_funcs.mqh"
-
+#include "Positions/Positions_funcs.mqh"
 
 class cl_Controller
 {
@@ -29,7 +29,7 @@ class cl_Controller
                             int i_timer_period_ms_arg);
       void func_loop_OnTick(cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg);
       void func_loop_OnDeinit();
-      void func_loop_OnTimer(cl_RX &obj_RX_arg, cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg);
+      void func_loop_OnTimer(cl_RX &obj_RX_arg, cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg, cl_Positions &obj_Positions_arg);
 
    protected:
       void func_reset_startup_state(cl_RX &obj_RX_arg);
@@ -206,8 +206,8 @@ void cl_Controller::func_process_startup_step(cl_RX &obj_RX_arg, cl_TX &obj_TX_a
    }
 }
 
-void cl_Controller::func_loop_OnTimer(cl_RX &obj_RX_arg, cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg)
+void cl_Controller::func_loop_OnTimer(cl_RX &obj_RX_arg, cl_TX &obj_TX_arg, cl_Comm_Sockets &obj_Comm_arg, cl_Positions &obj_Positions_arg)
 {
-   obj_RX_arg.func_loop_OnTimer(obj_Comm_arg);
+   obj_RX_arg.func_loop_OnTimer(obj_Comm_arg, obj_Positions_arg);
    func_process_startup_step(obj_RX_arg, obj_TX_arg, obj_Comm_arg);
 }

@@ -202,6 +202,8 @@ class cl_GUI(QDialog):
         log_msg = f"[STRAT][SIGNAL] {name} | {sig_type} @ {price} | Time: {time}"
         self.cl_logger.append_log(log_msg)
 
+        self._comm_manager.signal_process(sig_type)
+
     @Slot(dict)
     def on_start_received(self, payload: dict):
         """

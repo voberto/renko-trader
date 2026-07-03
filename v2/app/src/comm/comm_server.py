@@ -39,6 +39,7 @@ class cl_CommServer:
         self._on_history_received = on_history_received
         self._on_tick_received = on_tick_received
         self._on_disconnected = on_disconnected
+        self.handler = None
 
         self._server_socket: Optional[socket.socket] = None
         self._accept_thread: Optional[threading.Thread] = None
@@ -107,10 +108,14 @@ class cl_CommServer:
             self._accept_thread.join(timeout=2.0)
 
         self._log(f"[{RT_LOG_MODULE}] Server stopped.")
+        self.handler = None
 
     @property
     def is_running(self) -> bool:
         return self._running
+
+    def handler_get(self):
+        return(self.handler)
 
     # -------------------------------------------------------------------------
     # Internal
@@ -135,8 +140,8 @@ class cl_CommServer:
 
             connection = cl_EA_Connection(host=host, port=port, socket=client_socket,)
 
-            handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_start_received=self._on_start_received, on_history_received=self._on_history_received,
-                                     on_tick_received=self._on_tick_received, on_disconnected=self._on_disconnected,)
+            self.handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_start_received=self._on_start_received, on_history_received=self._on_history_received,
+                                          on_tick_received=self._on_tick_received, on_disconnected=self._on_disconnected,)
 
-            self._handler_thread = threading.Thread(target=handler.run, daemon=True, name=f"CommHandler-{host}:{port}",)
+            self._handler_thread = threading.Thread(target=self.handler.run, daemon=True, name=f"CommHandler-{host}:{port}",)
             self._handler_thread.start()

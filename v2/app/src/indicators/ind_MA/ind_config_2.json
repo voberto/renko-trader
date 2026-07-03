@@ -3,8 +3,8 @@
         "ID": 2,
         "name": "MA_002",
         "enabled": true,
-        "period": 5,
-        "price_applied": "price_weighted",
+        "period": 10,
+        "price_applied": "price_close",
         "color": "rgba(17, 226, 54, 0.8)"
     }
 }

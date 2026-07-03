@@ -13,6 +13,7 @@ from .comm_constants import (
     RT_ACK_START,
     RT_ACK_HISTORY,
     RT_LOG_MODULE,
+    TX_CMD_BASE,
 )
 from .comm_connection_model import cl_EA_Connection
 from .comm_network_protocol import recv_messages_with_delimiter, send_raw_text
@@ -98,26 +99,6 @@ class cl_CommHandler:
             self._log(f"[{RT_LOG_MODULE}] ACK_START send failed — closing.")
             self._conn.active = False
 
-    def _handle_history_OLD(self, msg_type: str, payload: dict) -> None:
-        if msg_type != RT_MSG_TYPE_HISTORY:
-            self._log(f"[{RT_LOG_MODULE}] Expected HISTORY, got '{msg_type}' — discarded.")
-            return
-
-        candles = payload.get("candles", [])
-        self._log(f"[{RT_LOG_MODULE}] HISTORY received: {len(candles)} candles.")
-
-        if self._on_history_received:
-            self._on_history_received(candles, payload)
-
-        # Send the HISTORY ACK. RT_ACK_HISTORY is now a JSON object string
-        ok = send_raw_text(self._conn.socket, RT_ACK_HISTORY)
-        if ok:
-            self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY sent ({RT_ACK_HISTORY}) — WAIT_HISTORY -> STREAMING.")
-            self._state = "STREAMING"
-        else:
-            self._log(f"[{RT_LOG_MODULE}] ACK_HISTORY send failed — closing.")
-            self._conn.active = False
-
     def _handle_history(self, msg_type: str, payload: dict) -> None:
         if msg_type != RT_MSG_TYPE_HISTORY:
             self._log(f"[{RT_LOG_MODULE}] Expected HISTORY, got '{msg_type}' — discarded.")
@@ -155,6 +136,11 @@ class cl_CommHandler:
         if self._on_tick_received:
             self._on_tick_received(payload)
 
+    def cmd_send(self, str_cmd_arg: str) -> None:
+        dict_cmd = json.loads(TX_CMD_BASE)
+        dict_cmd["value"] = str_cmd_arg
+        send_raw_text(self._conn.socket, json.dumps(dict_cmd))
+    
     def _cleanup(self) -> None:
         self._conn.active = False
         try:

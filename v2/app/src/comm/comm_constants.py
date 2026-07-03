@@ -24,5 +24,7 @@ RT_MSG_TYPE_DATA: str = "TX_DATA"
 RT_ACK_START: str = '{"type": "RX_ACK_START"}'
 RT_ACK_HISTORY: str = '{"type": "RX_ACK_HISTORY"}'
 
+TX_CMD_BASE: str = '{"type": "CMD"}'
+
 # Logging
 RT_LOG_MODULE: str = "COMM"

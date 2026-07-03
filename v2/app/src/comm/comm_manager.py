@@ -5,7 +5,8 @@
 from typing import Callable, Optional
 
 from .comm_server import cl_CommServer
-from .comm_constants import RT_DEFAULT_HOST, RT_DEFAULT_PORT
+from .comm_handler import cl_CommHandler
+from shared.constants import SIG_TYPE_LONG, SIG_TYPE_SHORT, CMD_TYPE_LONG, CMD_TYPE_SHORT
 
 
 class cl_CommManager:
@@ -48,6 +49,19 @@ class cl_CommManager:
         """
         self._server.stop()
 
+    def cmd_send(self, str_cmd_arg: str) -> None:
+        handler_curr = self._server.handler_get()
+        if(isinstance(handler_curr, cl_CommHandler)):
+            handler_curr.cmd_send(str_cmd_arg)
+
+    def signal_process(self, sig_type_arg) -> None:
+        if(sig_type_arg == SIG_TYPE_LONG):
+            self.cmd_send(CMD_TYPE_LONG)
+        elif(sig_type_arg == SIG_TYPE_SHORT):
+            self.cmd_send(CMD_TYPE_SHORT)
+        else:
+            self._log.append_log(f"[DEBUG][SIGNAL_PROCESS] Invalid signal type = {sig_type_arg}.")
+        
     @property
     def is_connected(self) -> bool:
         return self._server.is_running

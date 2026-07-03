@@ -16,6 +16,9 @@
 // socket buffer overflow (approx 150-200 bytes per tick in JSON)
 #define MAX_HISTORY_TICKS_SAFE_CAP  10000
 
+#define SIG_TYPE_LONG         "LONG_OPEN"
+#define SIG_TYPE_SHORT        "SHORT_OPEN"
+
 // Modules
 #include "Modules/Comm/Comm_Sockets/Comm_Sockets_funcs.mqh"
 #include "Modules/JSON/JSON_funcs.mqh"
@@ -54,6 +57,16 @@ input int i_inp_reconnect_backoff_ms   = 1000;        // [3.3] Min interval betw
 input group "--- [4] WATCHDOG ---"                    // --- [4] WATCHDOG ---
 input int i_inp_watchdog_tx_window_ms  = 30000;       // [4.1] TX activity window (ms)
 input int i_inp_watchdog_rx_timeout_ms = 60000;       // [4.2] RX silence timeout (ms)
+
+input group "--- [5] TRADES ---"                      // --- [5] TRADES ---
+input bool b_inp_trade_enabled = true;                // [5.1] Trades enabled?
+input bool b_inp_trade_close_on_opp = true;           // [5.2] Close on opposite signal?
+input bool b_inp_trade_async_enabled = true;          // [5.3] Async mode enabled?
+input long l_inp_magic_number = 1001;                 // [5.4] Magic number
+input double d_inp_lot_size = 0.01;                   // [5.5] Lot size
+input double d_inp_SL_points = 500;                   // [5.6] Stop loss (points)
+input double d_inp_TP_points = 500;                   // [5.7] Take profit (points)
+
 
 // Variables
 cl_Comm_Sockets obj_Comm;

@@ -5,6 +5,7 @@
 import pandas as pd
 from typing import Optional
 from .strategy_utils import cl_StrategyBase
+from shared.constants import SIG_TYPE_LONG, SIG_TYPE_SHORT
 
 
 class cl_StrategyMAC(cl_StrategyBase):
@@ -50,8 +51,8 @@ class cl_StrategyMAC(cl_StrategyBase):
         Processes a closed candle and checks for a crossover signal.
         
         Logic:
-        - BUY: Fast MA crosses ABOVE Slow MA.
-        - SELL: Fast MA crosses BELOW Slow MA.
+        - LONG: Fast MA crosses ABOVE Slow MA.
+        - SHORT: Fast MA crosses BELOW Slow MA.
         """
         # 1. Extract current values based on roles defined in config
         curr_fast = indicator_values.get(self._bound_fast_name)
@@ -63,27 +64,23 @@ class cl_StrategyMAC(cl_StrategyBase):
 
         signal = None
 
-        # 3. Diagnostic Logging (Optional - but very useful for debugging)
-        # Uncomment the line below to see every check in the log
-        #print(f"[DEBUG-MAC] {candle['time']} | Fast: {curr_fast:.2f} | Slow: {curr_slow:.2f} | PrevFast: {self._prev_fast}")
-
         # 3. Detect Crossover (requires previous values)
         if self._prev_fast is not None and self._prev_slow is not None:
             
-            # Check for Fast Crossing ABOVE Slow (BUY)
+            # Check for Fast Crossing ABOVE Slow (LONG)
             if self._prev_fast <= self._prev_slow and curr_fast > curr_slow:
                 signal = {
-                    "type": "BUY",
+                    "type": SIG_TYPE_LONG,
                     "id": self.id,
                     "name": self.name,
                     "price": candle.get("close"),
                     "time": candle.get("time")
                 }
             
-            # Check for Fast Crossing BELOW Slow (SELL)
+            # Check for Fast Crossing BELOW Slow (SHORT)
             elif self._prev_fast >= self._prev_slow and curr_fast < curr_slow:
                 signal = {
-                    "type": "SELL",
+                    "type": SIG_TYPE_SHORT,
                     "id": self.id,
                     "name": self.name,
                     "price": candle.get("close"),

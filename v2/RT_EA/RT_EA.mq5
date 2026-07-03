@@ -15,6 +15,7 @@
 cl_TX obj_TX;
 cl_RX obj_RX;
 cl_Controller obj_Controller;
+cl_Positions obj_Positions;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -23,6 +24,7 @@ int OnInit()
 {
    int i_retval = INIT_SUCCEEDED;
 
+   obj_Positions.func_loop_OnInit(b_inp_trade_enabled, b_inp_trade_close_on_opp, b_inp_trade_async_enabled, l_inp_magic_number, d_inp_lot_size, d_inp_SL_points, d_inp_TP_points);
    obj_Controller.func_loop_OnInit(obj_Comm, str_inp_host, i_inp_port, false, "00:00", "23:59", i_inp_timer_period_ms);
 
    return(i_retval);
@@ -56,7 +58,7 @@ void OnTick()
 void OnTimer()
 {
    // RX loop
-   obj_Controller.func_loop_OnTimer(obj_RX, obj_TX, obj_Comm);
+   obj_Controller.func_loop_OnTimer(obj_RX, obj_TX, obj_Comm, obj_Positions);
 }
 
 //+------------------------------------------------------------------+

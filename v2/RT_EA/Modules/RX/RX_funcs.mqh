@@ -3,6 +3,7 @@
 //+------------------------------------------------------------------+
 
 #include "../../EA_vars.mqh"
+#include "../Positions/Positions_funcs.mqh"
 
 
 class cl_RX
@@ -24,7 +25,7 @@ class cl_RX
       // Constructor and destructor
       cl_RX(void);
       ~cl_RX(void);   
-      void func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg);
+      void func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg, cl_Positions &obj_Positions_arg);
       
       // Startup protocol state getters
       bool func_b_ack_symbol_received(void) const;
@@ -36,8 +37,8 @@ class cl_RX
       ulong func_ul_last_rx_activity_ms(void) const;
 
    protected:
-      void func_RX_loop(cl_Comm_Sockets &obj_Comm_arg);
-      void func_message_handle(string str_msg_arg);
+      void func_RX_loop(cl_Comm_Sockets &obj_Comm_arg, cl_Positions &obj_Positions_arg);
+      void func_message_handle(string str_msg_arg, cl_Positions &obj_Positions_arg);
       string func_str_field_extract(string str_json_arg, string str_key_arg);
       string func_str_truncate_return(string str_arg, int i_max_len_arg);
       string func_str_tail_return(string str_arg, int i_max_len_arg);
@@ -62,7 +63,7 @@ cl_RX::~cl_RX(void)
 }
 
 // Main OnTimer loop (reconnection + reception)
-void cl_RX::func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg)
+void cl_RX::func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg, cl_Positions &obj_Positions_arg)
 {
    // Reconnect if disconnected
    bool b_is_connected = obj_Comm_arg.IsConnected();
@@ -89,12 +90,12 @@ void cl_RX::func_loop_OnTimer(cl_Comm_Sockets &obj_Comm_arg)
       b_reconnect_attempt = false;
 
       // Receive and process incoming messages
-      func_RX_loop(obj_Comm_arg);
+      func_RX_loop(obj_Comm_arg, obj_Positions_arg);
    }
 }
 
 // Internal RX loop (buffering + framing)
-void cl_RX::func_RX_loop(cl_Comm_Sockets &obj_Comm_arg)
+void cl_RX::func_RX_loop(cl_Comm_Sockets &obj_Comm_arg, cl_Positions &obj_Positions_arg)
 {
    string str_raw = obj_Comm_arg.ReceiveData(true);
    if(str_raw == "") return;
@@ -131,18 +132,25 @@ void cl_RX::func_RX_loop(cl_Comm_Sockets &obj_Comm_arg)
          continue;
       }
 
-      func_message_handle(str_line);
+      func_message_handle(str_line, obj_Positions_arg);
    }
 }
 
 // Message dispatcher (startup protocol + legacy CMD)
-void cl_RX::func_message_handle(string str_msg_arg)
+void cl_RX::func_message_handle(string str_msg_arg, cl_Positions &obj_Positions_arg)
 {
+   printf("[DEBUG] RX message = %s", str_msg_arg);
+   
    string str_type = func_str_field_extract(str_msg_arg, "type");
 
    if(str_type == RX_STATE_CMD)
    {
-      // Legacy CMD handling (reserved for steady-state commands from App)
+      string str_cmd = func_str_field_extract(str_msg_arg, "value");
+      
+      printf("[DEBUG] Received valid command = %s.", str_cmd);
+
+      // Process trades
+      obj_Positions_arg.func_loop_pos(str_cmd);
    }
    else if(str_type == RX_ACK_START)
    {

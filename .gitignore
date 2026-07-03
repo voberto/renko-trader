@@ -175,4 +175,5 @@ cython_debug/
 
 # Custom
 v2/docs/*
+v2/tests/*
 

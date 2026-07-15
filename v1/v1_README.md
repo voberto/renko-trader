@@ -38,8 +38,8 @@ v1/
 │   ├── utils/                  # Shared utilities
 │   ├── config.json             # Runtime configuration file
 │   └── main.py                 # Application entry point
-├── README.md
-├── renko-trader-app.png
+├── v1_README.md
+├── RT-v1-App.png
 └── requirements.txt
 ```
 

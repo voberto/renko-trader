@@ -141,7 +141,11 @@ bool cl_Comm_Sockets::Connect(bool b_msg_enabled_arg)
       return(false);
    }
    
-   if(IsConnected())
+   // IMPORTANT: check the underlying socket state (SocketIsConnected), NOT
+   // IsConnected(), which returns m_is_connected — still false at this point.
+   // Using IsConnected() here made Connect() always fall through to return(false),
+   // leaving m_is_connected == false even after a successful SocketConnect().
+   if(SocketIsConnected(m_client_socket))
    {
       m_is_connected = true;
       printf("[COMM_SOCKETS][INFO] Successfully connected to server (IP = %s, port = %d).", m_server_ip, m_server_port);
@@ -178,10 +182,14 @@ bool cl_Comm_Sockets::SendData(string str_data_arg, bool b_data_print_arg, strin
       }
       
       uchar uch_data_chars_arr[];
-      int i_data_len = StringToCharArray(str_data_arg, uch_data_chars_arr);
+      //int i_data_len = StringToCharArray(str_data_arg, uch_data_chars_arr);
+      int i_data_len = StringToCharArray(str_data_arg, uch_data_chars_arr, 0, WHOLE_ARRAY, CP_UTF8);
       
       // StringToCharArray appends a null terminator, so send data_len - 1 bytes
-      int i_send_result = SocketSend(m_client_socket, uch_data_chars_arr, i_data_len - 1);
+      int i_bytes_to_send = ArraySize(uch_data_chars_arr) - 1;
+      if (i_bytes_to_send <= 0) return false;
+
+      int i_send_result = SocketSend(m_client_socket, uch_data_chars_arr, i_bytes_to_send);
       if(i_send_result < 0)
       {
          int i_error = GetLastError();
@@ -198,8 +206,7 @@ bool cl_Comm_Sockets::SendData(string str_data_arg, bool b_data_print_arg, strin
       }
       else
       {
-         if(b_data_print_arg)       printf("[COMM_SOCKETS][INFO] Sent %s data to server (IP = %s, port = %d) = %s.", str_data_tier_arg, m_server_ip, m_server_port, str_data_arg);
-         else if(!b_data_print_arg) printf("[COMM_SOCKETS][INFO] Sent %s data to server (IP = %s, port = %d).", str_data_tier_arg, m_server_ip, m_server_port);
+         if(b_data_print_arg) printf("[COMM_SOCKETS][INFO] Sent %s data to server (IP = %s, port = %d).", str_data_tier_arg, m_server_ip, m_server_port);
       }
    }
    return true;

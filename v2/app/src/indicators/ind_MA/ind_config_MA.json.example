@@ -1,0 +1,17 @@
+{
+    "_comment": "Copy this file to ind_config_<ID>.json and fill in the fields. Example: ind_config_1.json",
+    "IND_MA": {
+        "ID": 1,
+        "_ID_comment": "Must be a unique integer. Must match the <ID> in the filename.",
+        "name": "MA_001",
+        "_name_comment": "Must be a unique string across all indicator config files.",
+        "enabled": true,
+        "_enabled_comment": "Set to false to disable this instance without deleting the file.",
+        "period": 20,
+        "_period_comment": "Any positive integer.",
+        "price_applied": "price_close",
+        "_price_applied_comment": "Valid options: price_open, price_high, price_low, price_close, price_median, price_typical, price_weighted.",
+        "color": "rgba(39, 183, 245, 0.8)",
+        "_color_comment": "RGBA color string. See https://rgbacolorpicker.com/"
+    }
+}

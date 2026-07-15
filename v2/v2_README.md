@@ -73,8 +73,8 @@ v2/
 │       ├── RX/            # Incoming commands and acknowledgements
 │       ├── TX/            # Outgoing market data and history
 │       └── Positions/     # Trade execution and position closing
-└── docs/
-    └── v2-blueprint.md
+├── RT-v2-System.png
+└── v2_README.md
 ```
 
 ## Requirements

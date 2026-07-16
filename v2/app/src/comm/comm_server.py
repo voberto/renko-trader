@@ -30,7 +30,7 @@ class cl_CommServer:
         on_start_received: Optional[Callable] = None,
         on_history_received: Optional[Callable] = None,
         on_tick_received: Optional[Callable] = None,
-        on_disconnected: Optional[Callable] = None,
+        on_conn_state: Optional[Callable[[bool], None]] = None,
     ):
         self._host = host
         self._port = port
@@ -38,7 +38,7 @@ class cl_CommServer:
         self._on_start_received = on_start_received
         self._on_history_received = on_history_received
         self._on_tick_received = on_tick_received
-        self._on_disconnected = on_disconnected
+        self._on_conn_state = on_conn_state
         self.handler = None
 
         self._server_socket: Optional[socket.socket] = None
@@ -46,6 +46,7 @@ class cl_CommServer:
         self._handler_thread: Optional[threading.Thread] = None
         self._active_client_socket: Optional[socket.socket] = None
         self._running: bool = False
+        self._ea_connected: bool = False
         self._lock = threading.Lock()
 
     # -------------------------------------------------------------------------
@@ -85,15 +86,19 @@ class cl_CommServer:
             if not self._running:
                 self._log(f"[{RT_LOG_MODULE}] Server stop requested but not running.")
                 return
+
             self._running = False
+            client_socket = self._active_client_socket
+            was_ea_connected = self._ea_connected
+            self._active_client_socket = None
+            self._ea_connected = False
 
         self._log(f"[{RT_LOG_MODULE}] Server stopping...")
 
         # Close the active EA connection first so the handler thread unblocks.
         try:
-            if self._active_client_socket:
-                self._active_client_socket.close()
-                self._active_client_socket = None
+            if client_socket:
+                client_socket.close()
         except Exception:
             pass
 
@@ -109,6 +114,9 @@ class cl_CommServer:
 
         self._log(f"[{RT_LOG_MODULE}] Server stopped.")
         self.handler = None
+
+        if was_ea_connected and self._on_conn_state:
+            self._on_conn_state(False)
 
     @property
     def is_running(self) -> bool:
@@ -137,11 +145,35 @@ class cl_CommServer:
             # Store reference so stop() can close it if needed.
             with self._lock:
                 self._active_client_socket = client_socket
+                self._ea_connected = True
 
             connection = cl_EA_Connection(host=host, port=port, socket=client_socket,)
 
-            self.handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_start_received=self._on_start_received, on_history_received=self._on_history_received,
-                                          on_tick_received=self._on_tick_received, on_disconnected=self._on_disconnected,)
+            self.handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_start_received=self._on_start_received,
+                                          on_history_received=self._on_history_received, on_tick_received=self._on_tick_received,
+                                          on_conn_state=lambda connected: self._on_handler_conn_state(client_socket, connected),)
+
+            if self._on_conn_state:
+                self._on_conn_state(True)
 
             self._handler_thread = threading.Thread(target=self.handler.run, daemon=True, name=f"CommHandler-{host}:{port}",)
             self._handler_thread.start()
+
+    def _on_handler_conn_state(self, client_socket: socket.socket, connected: bool) -> None:
+        """
+        Handles connection-state notifications from an EA handler.
+        Ignores notifications from stale handlers after a newer connection
+        has already become active.
+        """
+        if connected:
+            return
+
+        with self._lock:
+            if self._active_client_socket is not client_socket:
+                return
+
+            self._active_client_socket = None
+            self._ea_connected = False
+
+        if self._on_conn_state:
+            self._on_conn_state(False)

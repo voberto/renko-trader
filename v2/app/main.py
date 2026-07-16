@@ -27,7 +27,7 @@ def main():
     bridge.sig_start_received.connect(window.on_start_received)
     bridge.sig_history_received.connect(window.on_history_received)
     bridge.sig_tick_received.connect(window.on_tick_received)
-    bridge.sig_disconnected.connect(window.on_disconnected)
+    bridge.sig_conn_state.connect(window.on_conn_state)
     bridge.sig_log_message.connect(log_widget.append_log)
     
     # Connect the new strategy signal to the GUI handler
@@ -43,7 +43,7 @@ def main():
                     on_start_received = lambda payload: bridge.sig_start_received.emit(payload),
                     on_history_received = lambda ticks, payload: bridge.sig_history_received.emit(ticks, payload),
                     on_tick_received = lambda payload: bridge.sig_tick_received.emit(payload),
-                    on_disconnected = lambda: bridge.sig_disconnected.emit(),)
+                    on_conn_state = lambda connected: bridge.sig_conn_state.emit(connected),)
 
     # 6. Inject CommManager into GUI and wire buttons
     window.set_comm_manager(comm_manager)

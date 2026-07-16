@@ -65,6 +65,7 @@ class cl_GUI(QDialog):
 
         # Connection state
         self._connected = False
+        self._ea_connected = False
         self._startup_config = {}
         self._candle_engine = None
         self._ind_engine = None
@@ -348,13 +349,20 @@ class cl_GUI(QDialog):
             for sig in signals:
                 self.on_strategy_signal(sig)
 
-    @Slot()
-    def on_disconnected(self):
+    @Slot(bool)
+    def on_conn_state(self, connected: bool):
         """
-        Callback invoked when the EA disconnects.
+        Callback invoked when the EA connection state changes.
         """
+        if connected:
+            self._ea_connected = True
+            return
+        if not self._ea_connected:
+            return
+
+        self._ea_connected = False
         self.cl_logger.append_log("[APP] EA disconnected.")
-        self._set_connection_state(connected=False)
+        self._reset_ea_session()
 
     # ----
     # Button Handler
@@ -396,7 +404,8 @@ class cl_GUI(QDialog):
         else:
             self.btn_connect.setText(BUTTON_CONNECT_TEXT)
             self.btn_connect.setStyleSheet(STYLE_BUTTON_CONNECT)
-            self.edt_symbol.setText(SYMBOL_WAITING_TEXT)
+            self._ea_connected = False
+            self._reset_ea_session()
 
             # Reset chart on disconnection
             self.cl_chart.chart_clear()
@@ -407,3 +416,18 @@ class cl_GUI(QDialog):
             self._candle_engine = None
             self._ind_engine = None
             self._last_regular_candle = None
+
+    def _reset_ea_session(self):
+        """
+        Clears data and UI state associated with the current EA session.
+        """
+        self.edt_symbol.setText(SYMBOL_WAITING_TEXT)
+ 
+        self.cl_chart.chart_clear()
+        self.cl_logger.append_log("[APP] Chart cleared on disconnection.")
+
+        self.edt_brick.setText("")
+        self._startup_config = {}
+        self._candle_engine = None
+        self._ind_engine = None
+        self._last_regular_candle = None

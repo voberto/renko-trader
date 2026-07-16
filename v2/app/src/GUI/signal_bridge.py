@@ -14,6 +14,6 @@ class cl_SignalBridge(QObject):
     sig_start_received = Signal(dict)
     sig_history_received = Signal(list, dict)
     sig_tick_received = Signal(dict)
-    sig_disconnected = Signal()
+    sig_conn_state = Signal(bool)
     sig_log_message = Signal(str)
     sig_strategy_signal = Signal(dict)

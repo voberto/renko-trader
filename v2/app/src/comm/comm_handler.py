@@ -29,14 +29,14 @@ class cl_CommHandler:
         on_start_received: Optional[Callable[[dict], None]] = None,
         on_history_received: Optional[Callable[[list, dict], None]] = None,
         on_tick_received: Optional[Callable[[dict], None]] = None,
-        on_disconnected: Optional[Callable[[], None]] = None,
+        on_conn_state: Optional[Callable[[bool], None]] = None,
     ):
         self._conn = connection
         self._log = logger_callback
         self._on_start_received = on_start_received
         self._on_history_received = on_history_received
         self._on_tick_received = on_tick_received
-        self._on_disconnected = on_disconnected
+        self._on_conn_state = on_conn_state
         self._state: str = "WAIT_START"
         self._debug_log = False
 
@@ -203,8 +203,8 @@ class cl_CommHandler:
         except Exception:
             pass
         self._log(f"[{RT_LOG_MODULE}] Handler finished — connection closed.")
-        if self._on_disconnected:
-            self._on_disconnected()
+        if self._on_conn_state:
+            self._on_conn_state(False)
 
     def append_log(self, message: str) -> None:
         self._log(message)

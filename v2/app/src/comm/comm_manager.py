@@ -23,7 +23,7 @@ class cl_CommManager:
         on_start_received: Optional[Callable[[dict], None]] = None,
         on_history_received: Optional[Callable[[list, dict], None]] = None,
         on_tick_received: Optional[Callable[[dict], None]] = None,
-        on_disconnected: Optional[Callable[[], None]] = None,
+        on_conn_state: Optional[Callable[[bool], None]] = None,
     ):
         self._host = host
         self._port = port
@@ -31,10 +31,10 @@ class cl_CommManager:
         self._on_start_received = on_start_received
         self._on_history_received = on_history_received
         self._on_tick_received = on_tick_received
-        self._on_disconnected = on_disconnected
+        self._on_conn_state = on_conn_state
 
         self._server = cl_CommServer(host=host, port=port, logger_callback=logger_callback, on_start_received=on_start_received, on_history_received=on_history_received,
-                                     on_tick_received=on_tick_received, on_disconnected=on_disconnected,)
+                                     on_tick_received=on_tick_received, on_conn_state=on_conn_state,)
 
     def connect(self) -> bool:
         """

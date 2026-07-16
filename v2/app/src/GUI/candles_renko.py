@@ -31,7 +31,7 @@ class cl_RenkoEngine:
         self._cbc_high:        float = 0.0
         self._cbc_low:         float = 0.0
         self._cbc_close:       float = 0.0
-        self._cbc_tstamp_real: int   = 0    # last real tick timestamp processed
+        self._cbc_tstamp_real: int   = 0    # last real tick timestamp processed, in milliseconds
 
     def candle_count_hist_get(self):
         return(self._candle_count_hist)
@@ -56,7 +56,7 @@ class cl_RenkoEngine:
         the CbC state buffer from the last completed brick.
         Returns an empty DataFrame if the input is empty or no bricks are formed.
         """
-        empty = pd.DataFrame(columns=["time", "open", "high", "low", "close"])
+        empty = pd.DataFrame(columns=["time", "time_real", "open", "high", "low", "close"])
 
         if not ticks or len(ticks) < 2:
             return empty
@@ -74,7 +74,10 @@ class cl_RenkoEngine:
 
         for i, elem in enumerate(ticks):
             tstamp = int(elem["time"])
-            price  = float(elem["price"])
+            price = float(elem["price"])
+
+            # Historical ticks currently provide timestamps in seconds only.
+            tstamp_msc = tstamp * 1000
 
             if i == 0:
                 curr["time"]  = tstamp
@@ -102,7 +105,7 @@ class cl_RenkoEngine:
                     candle_size = abs(curr["close"] - curr["open"])
 
                     if curr["close"] != curr["open"]:
-                        out_time_real.append(curr["time"])
+                        out_time_real.append(tstamp_msc)
                         out_open.append(curr["open"])
                         out_high.append(max(curr["open"], curr["close"]))
                         out_low.append(min(curr["open"], curr["close"]))
@@ -125,7 +128,7 @@ class cl_RenkoEngine:
 
         df = pd.DataFrame({
             "time":      out_time_fake,
-            "time_real": out_time_real,
+            "time_real": pd.to_datetime(out_time_real, unit="ms"),
             "open":      [round(x, self._digits) for x in out_open],
             "high":      [round(x, self._digits) for x in out_high],
             "low":       [round(x, self._digits) for x in out_low],
@@ -137,10 +140,9 @@ class cl_RenkoEngine:
         self._cbc_high        = 0.0
         self._cbc_low         = 0.0
         self._cbc_close       = 0.0
-        self._cbc_tstamp_real = int(out_time_real[-1])
+        self._cbc_tstamp_real = out_time_real[-1]
 
-        # Return only chart-facing columns (strip time_real)
-        return df[["time", "open", "high", "low", "close"]].copy()
+        return df
 
     # ----
     # Public — Real-time tick
@@ -152,8 +154,9 @@ class cl_RenkoEngine:
         or None if the tick did not complete any brick.
         Unlike history mode, a single tick can emit multiple bricks (gap scenario).
         """
-        tstamp = tick.get("tstamp", tick.get("time"))
-        price  = tick.get("bid",    tick.get("ask", tick.get("price")))
+        tstamp     = tick.get("tstamp", tick.get("time"))
+        tstamp_msc = tick.get("tstamp_msc")
+        price      = tick.get("bid", tick.get("ask", tick.get("price")))
 
         if tstamp is None or price is None:
             return None
@@ -161,11 +164,19 @@ class cl_RenkoEngine:
         tstamp = int(tstamp)
         price  = float(price)
 
+        # tstamp_msc is expected from the EA for real tick precision.
+        # For compatibility with an EA that has not yet been updated, derive
+        # the millisecond value explicitly from the seconds-based timestamp.
+        if tstamp_msc is None:
+            tstamp_msc = tstamp * 1000
+        else:
+            tstamp_msc = int(tstamp_msc)
+
         # Discard out-of-order ticks
-        if tstamp <= self._cbc_tstamp_real:
+        if tstamp_msc <= self._cbc_tstamp_real:
             return None
 
-        self._cbc_tstamp_real = tstamp
+        self._cbc_tstamp_real = tstamp_msc
         self._cbc_close = price
 
         if self._cbc_open == 0.0:
@@ -180,11 +191,12 @@ class cl_RenkoEngine:
         if candle_size < self._brick_size_pts:
             return None
 
-        out_time:  list = []
-        out_open:  list = []
-        out_high:  list = []
-        out_low:   list = []
-        out_close: list = []
+        out_time:       list = []
+        out_time_real:  list = []
+        out_open:       list = []
+        out_high:       list = []
+        out_low:        list = []
+        out_close:      list = []
 
         # While loop can emit multiple bricks per tick (gap scenario).
         # After emitting: close is reset to price, so candle_size is re-evaluated
@@ -196,6 +208,7 @@ class cl_RenkoEngine:
                 self._cbc_close = self._cbc_open - self._brick_size_pts
 
             out_time.append(self._next_fake_ts())
+            out_time_real.append(tstamp_msc)
             out_open.append(self._cbc_open)
             out_high.append(max(self._cbc_open, self._cbc_close))
             out_low.append(min(self._cbc_open, self._cbc_close))
@@ -211,9 +224,10 @@ class cl_RenkoEngine:
             return None
 
         return pd.DataFrame({
-            "time":  out_time,
-            "open":  [round(x, self._digits) for x in out_open],
-            "high":  [round(x, self._digits) for x in out_high],
-            "low":   [round(x, self._digits) for x in out_low],
-            "close": [round(x, self._digits) for x in out_close],
+            "time":         out_time,
+            "time_real":    pd.to_datetime(out_time_real, unit="ms"),
+            "open":         [round(x, self._digits) for x in out_open],
+            "high":         [round(x, self._digits) for x in out_high],
+            "low":          [round(x, self._digits) for x in out_low],
+            "close":        [round(x, self._digits) for x in out_close],
         })

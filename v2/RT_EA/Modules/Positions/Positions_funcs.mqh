@@ -60,6 +60,8 @@ void cl_Positions::func_loop_OnInit(bool b_trade_enabled_arg, bool b_trade_close
 
 void cl_Positions::func_loop_pos(string str_sig_type_arg)
 {
+   if(!b_trade_enabled) return;
+   
    double d_EP = 0.0, d_SL = 0.0, d_TP = 0.0;
    string str_comment = "";
    

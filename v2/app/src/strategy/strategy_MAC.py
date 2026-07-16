@@ -74,7 +74,8 @@ class cl_StrategyMAC(cl_StrategyBase):
                     "id": self.id,
                     "name": self.name,
                     "price": candle.get("close"),
-                    "time": candle.get("time")
+                    "time": candle.get("time"),
+                    "time_real": candle.get("time_real")
                 }
             
             # Check for Fast Crossing BELOW Slow (SHORT)
@@ -84,7 +85,8 @@ class cl_StrategyMAC(cl_StrategyBase):
                     "id": self.id,
                     "name": self.name,
                     "price": candle.get("close"),
-                    "time": candle.get("time")
+                    "time": candle.get("time"),
+                    "time_real": candle.get("time_real")
                 }
 
         # 4. Update state for the next call

@@ -55,7 +55,8 @@ class cl_Chart(CustomChart):
         if df is None or df.empty:
             return
 
-        self.set(df)
+        df_chart = df[["time", "open", "high", "low", "close"]].copy()
+        self.set(df_chart)
         self._current_candle = df.iloc[-1]
 
     def update_tick(self, series: pd.Series) -> None:
@@ -68,7 +69,8 @@ class cl_Chart(CustomChart):
             return
 
         self._current_candle = series
-        self.update(series)
+        series_chart = series[["time", "open", "high", "low", "close"]].copy()
+        self.update(series_chart)
 
     def update_ticks(self, df: pd.DataFrame) -> None:
         """
@@ -81,7 +83,8 @@ class cl_Chart(CustomChart):
 
         for _, row in df.iterrows():
             self._current_candle = row
-            self.update(row)
+            row_chart = row[["time", "open", "high", "low", "close"]].copy()
+            self.update(row_chart)
 
     # -----------------------------------------------------------------------
     # Indicator line management

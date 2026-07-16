@@ -25,7 +25,7 @@ class cl_CandleEngine:
         Returns an empty DataFrame if the input is empty.
         """
         if not candles:
-            return pd.DataFrame(columns=["time", "open", "high", "low", "close"])
+            return pd.DataFrame(columns=["time", "time_real", "open", "high", "low", "close"])
 
         df = pd.DataFrame(candles)
 
@@ -34,8 +34,11 @@ class cl_CandleEngine:
 
         df["time"] = pd.to_datetime(df["time"], unit="s")
 
+        # Historical regular candles provide their opening time in seconds.
+        # Preserve that instant as the real time with millisecond resolution.
         df_out = pd.DataFrame({
             "time":  df["time"].to_list(),
+            "time_real": df["time"].to_list(),
             "open":  df["open"].astype(float),
             "high":  df["high"].astype(float),
             "low":   df["low"].astype(float),
@@ -51,7 +54,8 @@ class cl_CandleEngine:
         # Time stored as Unix int to guarantee unambiguous comparison in process_tick
         last = df_out.iloc[-1]
         self._current_candle = {
-            "time":  int(last["time"].value) // 10**9,
+            "time":      int(last["time"].value) // 10**9,
+            "time_real": int(last["time_real"].value) // 10**6,
             "open":  float(last["open"]),
             "high":  float(last["high"]),
             "low":   float(last["low"]),
@@ -69,14 +73,23 @@ class cl_CandleEngine:
         Updates the internal OHLC state and returns a pd.Series ready for chart.update().
         Returns None if the tick payload is invalid.
         """
-        tstamp = tick.get("tstamp", tick.get("time"))
-        price  = tick.get("bid", tick.get("ask", tick.get("price")))
+        tstamp     = tick.get("tstamp", tick.get("time"))
+        tstamp_msc = tick.get("tstamp_msc")
+        price      = tick.get("bid", tick.get("ask", tick.get("price")))
 
         if tstamp is None or price is None:
             return None
 
         tstamp = int(tstamp)
-        price  = float(price)
+        price = float(price)
+
+        # tstamp_msc is expected from the EA for real tick precision.
+        # For compatibility with an EA that has not yet been updated, derive
+        # the millisecond value explicitly from the seconds-based timestamp.
+        if tstamp_msc is None:
+            tstamp_msc = tstamp * 1000
+        else:
+            tstamp_msc = int(tstamp_msc)
 
         # Align to timeframe boundary — compare as Unix int, unambiguous
         candle_time = (tstamp // self.timeframe_sec) * self.timeframe_sec
@@ -86,10 +99,12 @@ class cl_CandleEngine:
             self._current_candle["high"]  = max(self._current_candle["high"], price)
             self._current_candle["low"]   = min(self._current_candle["low"],  price)
             self._current_candle["close"] = price
+            self._current_candle["time_real"] = tstamp_msc
         else:
             # Open a new candle
             self._current_candle = {
                 "time":  candle_time,
+                "time_real": tstamp_msc,
                 "open":  price,
                 "high":  price,
                 "low":   price,
@@ -99,6 +114,7 @@ class cl_CandleEngine:
         # Convert time to pd.Timestamp only at the output boundary
         return pd.Series({
             "time":  pd.to_datetime(self._current_candle["time"], unit="s"),
+            "time_real": pd.to_datetime(self._current_candle["time_real"], unit="ms"),
             "open":  self._current_candle["open"],
             "high":  self._current_candle["high"],
             "low":   self._current_candle["low"],

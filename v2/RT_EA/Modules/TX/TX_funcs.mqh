@@ -52,6 +52,14 @@ cl_TX::~cl_TX(void)
 void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg, bool b_data_print_arg)
 {
    // Collect market variables
+   MqlTick mqlt_tick = {};
+
+   if(!SymbolInfoTick(Symbol(), mqlt_tick))
+   {
+      printf("[TX][ERROR] SymbolInfoTick failed. Error: %d.", GetLastError());
+      return;
+   }
+   
    d_price_ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
    d_price_bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
    dt_tstamp = TimeCurrent();
@@ -60,6 +68,7 @@ void cl_TX::func_TX_data_send(cl_Comm_Sockets &obj_Comm_arg, bool b_data_print_a
    obj_JSON.func_reset();
    obj_JSON.func_str_add("type", TX_DATA);
    obj_JSON.func_raw_add("tstamp", IntegerToString(dt_tstamp));
+   obj_JSON.func_raw_add("tstamp_msc", IntegerToString(mqlt_tick.time_msc));
    obj_JSON.func_double_add("ask", d_price_ask, _Digits);
    obj_JSON.func_double_add("bid", d_price_bid, _Digits);
    string str_TX = obj_JSON.func_str_return() + COMM_MSG_DELIMITER;

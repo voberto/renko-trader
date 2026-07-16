@@ -199,8 +199,9 @@ class cl_GUI(QDialog):
         name = payload.get("name", "N/A")
         price = payload.get("price", 0.0)
         time = payload.get("time", "N/A")
+        time_real = str(payload.get("time_real", "N/A"))[:-3]
         
-        log_msg = f"[STRAT][SIGNAL] {name} | {sig_type} @ {price} | Time: {time}"
+        log_msg = f"[STRAT][SIGNAL] {name} | {sig_type} @ {price} | Time (chart): {time} | Time (real): {time_real}"
         self.cl_logger.append_log(log_msg)
 
         self._comm_manager.signal_process(sig_type)

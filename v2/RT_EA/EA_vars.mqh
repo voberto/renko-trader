@@ -5,8 +5,8 @@
 // Definitions
 #define COMM_MSG_DELIMITER          "<FRAME_END>"
 #define RX_STATE_CMD                "CMD"
-#define RX_SIZE_LIMIT               200
-#define MAX_HISTORY_TICKS_SAFE_CAP  10000
+#define RX_SIZE_LIMIT               1000
+#define MAX_HISTORY_TICKS_SAFE_CAP  100000
 // Protocol type
 #define TX_START                    "TX_START"
 #define TX_HISTORY                  "TX_HISTORY"
@@ -44,14 +44,14 @@ input group "--- [1] CONNECTION ---"                  // --- [1] CONNECTION ---
 input string str_inp_host = "127.0.0.1";              // [1.1] Host (IP address)
 input int i_inp_port = 9005;                          // [1.2] Port
 input int i_inp_timer_period_ms = 16;                 // [1.3] Timer period (ms)
-input int i_inp_lookback_startup_candles = 100;       // [1.4] Startup lookback (candles/ticks)
+input int i_inp_lookback_startup_candles = 20000;     // [1.4] Startup lookback (candles/ticks)
 
 input group "--- [2] SETUP ---"                       // --- [2] SETUP ---
-input en_candles_type en_inp_ct_curr = en_cd_regular; // [2.1] Candle type
-input int i_inp_renko_brick_size = 1000;              // [2.2] Brick size (points)
+input en_candles_type en_inp_ct_curr = en_cd_renko;   // [2.1] Candle type
+input int i_inp_renko_brick_size = 150;               // [2.2] Brick size (points)
 
 input group "--- [3] STARTUP PROTOCOL ---"            // --- [3] STARTUP PROTOCOL ---
-input int i_inp_startup_ack_timeout_ms = 2000;        // [3.1] ACK timeout per startup step (ms)
+input int i_inp_startup_ack_timeout_ms = 5000;        // [3.1] ACK timeout per startup step (ms)
 input int i_inp_startup_max_retries    = 5;           // [3.2] Max retransmissions before reset
 input int i_inp_reconnect_backoff_ms   = 1000;        // [3.3] Min interval between reconnect attempts (ms)
 
@@ -60,7 +60,7 @@ input int i_inp_watchdog_tx_window_ms  = 30000;       // [4.1] TX activity windo
 input int i_inp_watchdog_rx_timeout_ms = 60000;       // [4.2] RX silence timeout (ms)
 
 input group "--- [5] TRADES ---"                      // --- [5] TRADES ---
-input bool b_inp_trade_enabled = true;                // [5.1] Trades enabled?
+input bool b_inp_trade_enabled = false;               // [5.1] Trades enabled?
 input bool b_inp_trade_close_on_opp = true;           // [5.2] Close on opposite signal?
 input bool b_inp_trade_async_enabled = true;          // [5.3] Async mode enabled?
 input long l_inp_magic_number = 1001;                 // [5.4] Magic number

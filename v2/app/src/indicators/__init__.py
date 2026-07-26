@@ -2,8 +2,8 @@
 # Single wiring point: registers all indicator descriptors into cl_IndicatorEngine.
 # To add a new indicator type, import its descriptor here and add one register call.
 
-from .indicators import cl_IndicatorEngine
 from .ind_MA.ind_MA import IND_MA_DESCRIPTOR
+from .indicators import cl_IndicatorEngine
 
 
 def build_indicator_engine(logger_callback) -> cl_IndicatorEngine:

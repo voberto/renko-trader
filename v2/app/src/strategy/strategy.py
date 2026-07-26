@@ -2,15 +2,15 @@
 # Final adjustment: Supports both flat and enveloped JSON structures.
 
 import glob
+import importlib.util
 import json
 import os
 import sys
-import importlib.util
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import pandas as pd
-from .strategy_utils import cl_StrategyBase
 
+from .strategy_utils import cl_StrategyBase
 
 STRAT_LOG_MODULE = "STRAT"
 
@@ -54,7 +54,7 @@ class cl_StrategyManager:
                     attr = getattr(module, attr_name)
                     if (isinstance(attr, type) and issubclass(attr, cl_StrategyBase) and attr is not cl_StrategyBase):
                         self._strategy_map[attr_name] = attr
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._log(f"[{STRAT_LOG_MODULE}] Failed to import {module_name}: {e}")
 
     def _load_single_strategy(self, filepath: str, active_indicators: list[dict]) -> None:
@@ -62,13 +62,13 @@ class cl_StrategyManager:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 raw_data = json.load(f)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._log(f"[{STRAT_LOG_MODULE}] {filename} -> Read error: {e}")
             return
 
         # Handle Enveloped Structure (like indicators) or Flat Structure
         # Find the first key that doesn't start with '_'
-        keys = [k for k in raw_data.keys() if not k.startswith("_")]
+        keys = [k for k in raw_data if not k.startswith("_")]
         
         # If there's only one relevant key and it contains 'enabled' or 'ID', it's an envelope
         if len(keys) == 1 and isinstance(raw_data[keys[0]], dict):
@@ -97,14 +97,14 @@ class cl_StrategyManager:
 
         try:
             strat_instance = self._strategy_map[class_name](cfg)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._log(f"[{STRAT_LOG_MODULE}] {filename} -> Instantiation error: {e}")
             return
 
         self._log(f"[{STRAT_LOG_MODULE}] DEBUG active_indicators: {active_indicators}")
 
         # Collect all candidates grouped by unique indicator type required
-        required_types = set(req.get("type") for req in cfg.get("required_indicators", []))
+        required_types = {req.get("type") for req in cfg.get("required_indicators", [])}
         candidates = {}
         for ind_type in required_types:
             matches = self._find_all_of_type(ind_type, active_indicators)
@@ -132,7 +132,7 @@ class cl_StrategyManager:
                 results.append({"name": cfg.get("name"), "params": cfg})
         return results
 
-    def warmup_all(self, df_candles: pd.DataFrame, indicator_results: dict[str, Optional[pd.DataFrame]]) -> None:
+    def warmup_all(self, df_candles: pd.DataFrame, indicator_results: dict[str, pd.DataFrame | None]) -> None:
         """
         Sequentially feeds historical candles and indicator results to all active strategies
         to seed their internal states before live streaming begins.
@@ -155,7 +155,7 @@ class cl_StrategyManager:
 
         self._log(f"[{STRAT_LOG_MODULE}] Warmup complete.")
 
-    def execute(self, candle: pd.Series, indicator_results: dict[str, Optional[pd.Series]]) -> list[dict]:
+    def execute(self, candle: pd.Series, indicator_results: dict[str, pd.Series | None]) -> list[dict]:
         all_signals = []
         for strategy in self._strategies:
             # Pass all indicator values by name — strategy uses its internal bound names

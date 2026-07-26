@@ -3,21 +3,21 @@
 
 import json
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
+from .comm_connection_model import cl_EA_Connection
 from .comm_constants import (
-    RT_POLL_INTERVAL_SECS,
-    RT_MSG_TYPE_START,
-    RT_MSG_TYPE_HISTORY,
-    RT_MSG_TYPE_HISTORY_META,
-    RT_MSG_TYPE_DATA,
-    RT_ACK_START,
     RT_ACK_HISTORY,
     RT_ACK_HISTORY_BLOCK_BASE,
+    RT_ACK_START,
     RT_LOG_MODULE,
+    RT_MSG_TYPE_DATA,
+    RT_MSG_TYPE_HISTORY,
+    RT_MSG_TYPE_HISTORY_META,
+    RT_MSG_TYPE_START,
+    RT_POLL_INTERVAL_SECS,
     TX_CMD_BASE,
 )
-from .comm_connection_model import cl_EA_Connection
 from .comm_network_protocol import recv_messages_with_delimiter, send_raw_text
 
 
@@ -26,10 +26,10 @@ class cl_CommHandler:
         self,
         connection: cl_EA_Connection,
         logger_callback: Callable[[str], None],
-        on_start_received: Optional[Callable[[dict], None]] = None,
-        on_history_received: Optional[Callable[[list, dict], None]] = None,
-        on_tick_received: Optional[Callable[[dict], None]] = None,
-        on_conn_state: Optional[Callable[[bool], None]] = None,
+        on_start_received: Callable[[dict], None] | None = None,
+        on_history_received: Callable[[list, dict], None] | None = None,
+        on_tick_received: Callable[[dict], None] | None = None,
+        on_conn_state: Callable[[bool], None] | None = None,
     ):
         self._conn = connection
         self._log = logger_callback
@@ -60,7 +60,7 @@ class cl_CommHandler:
                 self._conn.activity_last = time.time()
                 for raw in messages:
                     self._dispatch(raw)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._log(f"[{RT_LOG_MODULE}] Handler error: {type(e).__name__}: {e}.")
         finally:
             self._cleanup()
@@ -200,8 +200,8 @@ class cl_CommHandler:
         self._conn.active = False
         try:
             self._conn.socket.close()
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001
+            self._log(f"[{RT_LOG_MODULE}] Cleanup exception.")
         self._log(f"[{RT_LOG_MODULE}] Handler finished — connection closed.")
         if self._on_conn_state:
             self._on_conn_state(False)

@@ -1,6 +1,7 @@
 import json
 import os
 
+
 class cl_Config:
     def __init__(self, logger_callback=None):
         """
@@ -39,9 +40,9 @@ class cl_Config:
             if logger_callback:
                 logger_callback(f"Config file loaded successfully from: {final_path}")
                 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             if logger_callback:
-                logger_callback(f"Error loading config.json: {str(e)}")
+                logger_callback(f"Error loading config.json: {str(e)}")  # noqa: RUF010
             self.dic_config = {}
 
     def get_val(self, section, key, default=None):
@@ -50,5 +51,5 @@ class cl_Config:
         """
         try:
             return self.dic_config.get(section, {}).get(key, default)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return default

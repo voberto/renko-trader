@@ -1,10 +1,7 @@
 import pandas as pd
-from typing import Optional
-
-from lightweight_charts.widgets import QtChart
 from lightweight_charts.abstract import Line
-from lightweight_charts.util import js_data
-from lightweight_charts.util import LINE_STYLE
+from lightweight_charts.util import LINE_STYLE, js_data
+from lightweight_charts.widgets import QtChart
 
 
 def _to_chart_timestamp(value) -> int:
@@ -81,7 +78,7 @@ class CustomChart(QtChart):
         df["time"] = df["time"].apply(_to_chart_timestamp)
         return df
 
-    def set(self, df: Optional[pd.DataFrame] = None, keep_drawings=False):
+    def set(self, df: pd.DataFrame | None = None, keep_drawings=False):
         if df is None or df.empty:
             self.run_script(f"{self.id}.series.setData([])")
             self.run_script(f"{self.id}.volumeSeries.setData([])")
@@ -124,7 +121,7 @@ class CustomChart(QtChart):
         width: int = 2,
         price_line: bool = True,
         price_label: bool = True,
-        price_scale_id: Optional[str] = None,
+        price_scale_id: str | None = None,
     ) -> CustomLine:
         """
         Creates a fixed Line object.

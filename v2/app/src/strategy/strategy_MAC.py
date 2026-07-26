@@ -3,9 +3,9 @@
 # Signals are generated when a fast MA crosses a slow MA.
 
 import pandas as pd
-from typing import Optional
-from .strategy_utils import cl_StrategyBase
 from shared.constants import SIG_TYPE_LONG, SIG_TYPE_SHORT
+
+from .strategy_utils import cl_StrategyBase
 
 
 class cl_StrategyMAC(cl_StrategyBase):
@@ -18,10 +18,10 @@ class cl_StrategyMAC(cl_StrategyBase):
         super().__init__(config)
         
         # State tracking for crossover detection
-        self._prev_fast: Optional[float] = None
-        self._prev_slow: Optional[float] = None
-        self._bound_fast_name: Optional[str] = None
-        self._bound_slow_name: Optional[str] = None
+        self._prev_fast: float | None = None
+        self._prev_slow: float | None = None
+        self._bound_fast_name: str | None = None
+        self._bound_slow_name: str | None = None
 
     def set_bindings(self, candidates: dict) -> None:
         """
@@ -46,7 +46,7 @@ class cl_StrategyMAC(cl_StrategyBase):
         self._bound_fast_name = sorted_mas[0]["name"]
         self._bound_slow_name = sorted_mas[-1]["name"]
 
-    def process(self, candle: pd.Series, indicator_values: dict[str, float]) -> Optional[dict]:
+    def process(self, candle: pd.Series, indicator_values: dict[str, float]) -> dict | None:
         """
         Processes a closed candle and checks for a crossover signal.
         

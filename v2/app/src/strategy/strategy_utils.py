@@ -3,7 +3,7 @@
 # Defines the contract for strategy implementation and data processing.
 
 from abc import ABC, abstractmethod
-from typing import Optional
+
 import pandas as pd
 
 
@@ -49,7 +49,7 @@ class cl_StrategyBase(ABC):
         self.process(candle, indicator_values)
 
     @abstractmethod
-    def process(self, candle: pd.Series, indicator_values: dict[str, float]) -> Optional[dict]:
+    def process(self, candle: pd.Series, indicator_values: dict[str, float]) -> dict | None:
         """
         Processes a completed candle and its associated indicator values.
         
@@ -68,7 +68,6 @@ class cl_StrategyBase(ABC):
             A dictionary containing the signal details (type, price, time) 
             if a signal is generated, otherwise None.
         """
-        pass
 
     def __repr__(self):
-        return f"<​Strategy {self.name} (ID: {self.id}, Enabled: {self.enabled})>"
+        return f"<\u200bStrategy {self.name} (ID: {self.id}, Enabled: {self.enabled})>"

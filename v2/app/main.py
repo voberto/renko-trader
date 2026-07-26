@@ -1,12 +1,12 @@
 import sys
-from PySide6.QtWidgets import QApplication
 
+from PySide6.QtWidgets import QApplication
+from src.comm.comm_manager import cl_CommManager
 from src.config.config import cl_Config
+from src.GUI.chart import cl_Chart
 from src.GUI.GUI import cl_GUI
 from src.GUI.logger import cl_Logger
-from src.GUI.chart import cl_Chart
 from src.GUI.signal_bridge import cl_SignalBridge
-from src.comm.comm_manager import cl_CommManager
 
 
 def main():

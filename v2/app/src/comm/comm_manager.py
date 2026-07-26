@@ -2,11 +2,17 @@
 # Public facade for the comm layer. Used by GUI and main to start/stop
 # the server and register application-level callbacks.
 
-from typing import Callable, Optional
+from collections.abc import Callable
 
-from .comm_server import cl_CommServer
+from shared.constants import (
+    CMD_TYPE_LONG,
+    CMD_TYPE_SHORT,
+    SIG_TYPE_LONG,
+    SIG_TYPE_SHORT,
+)
+
 from .comm_handler import cl_CommHandler
-from shared.constants import SIG_TYPE_LONG, SIG_TYPE_SHORT, CMD_TYPE_LONG, CMD_TYPE_SHORT
+from .comm_server import cl_CommServer
 
 
 class cl_CommManager:
@@ -20,10 +26,10 @@ class cl_CommManager:
         host: str,
         port: int,
         logger_callback: Callable[[str], None],
-        on_start_received: Optional[Callable[[dict], None]] = None,
-        on_history_received: Optional[Callable[[list, dict], None]] = None,
-        on_tick_received: Optional[Callable[[dict], None]] = None,
-        on_conn_state: Optional[Callable[[bool], None]] = None,
+        on_start_received: Callable[[dict], None] | None = None,
+        on_history_received: Callable[[list, dict], None] | None = None,
+        on_tick_received: Callable[[dict], None] | None = None,
+        on_conn_state: Callable[[bool], None] | None = None,
     ):
         self._host = host
         self._port = port

@@ -4,15 +4,15 @@
 
 import socket
 import threading
-from typing import Callable, Optional
+from collections.abc import Callable
 
+from .comm_connection_model import cl_EA_Connection
 from .comm_constants import (
+    RT_ACCEPT_BACKLOG,
     RT_DEFAULT_HOST,
     RT_DEFAULT_PORT,
-    RT_ACCEPT_BACKLOG,
     RT_LOG_MODULE,
 )
-from .comm_connection_model import cl_EA_Connection
 from .comm_handler import cl_CommHandler
 
 
@@ -26,11 +26,11 @@ class cl_CommServer:
         self,
         host: str = RT_DEFAULT_HOST,
         port: int = RT_DEFAULT_PORT,
-        logger_callback: Optional[Callable[[str], None]] = None,
-        on_start_received: Optional[Callable] = None,
-        on_history_received: Optional[Callable] = None,
-        on_tick_received: Optional[Callable] = None,
-        on_conn_state: Optional[Callable[[bool], None]] = None,
+        logger_callback: Callable[[str], None] | None = None,
+        on_start_received: Callable | None = None,
+        on_history_received: Callable | None = None,
+        on_tick_received: Callable | None = None,
+        on_conn_state: Callable[[bool], None] | None = None,
     ):
         self._host = host
         self._port = port
@@ -41,10 +41,10 @@ class cl_CommServer:
         self._on_conn_state = on_conn_state
         self.handler = None
 
-        self._server_socket: Optional[socket.socket] = None
-        self._accept_thread: Optional[threading.Thread] = None
-        self._handler_thread: Optional[threading.Thread] = None
-        self._active_client_socket: Optional[socket.socket] = None
+        self._server_socket: socket.socket | None = None
+        self._accept_thread: threading.Thread | None = None
+        self._handler_thread: threading.Thread | None = None
+        self._active_client_socket: socket.socket | None = None
         self._running: bool = False
         self._ea_connected: bool = False
         self._lock = threading.Lock()
@@ -68,7 +68,7 @@ class cl_CommServer:
                 self._server_socket.bind((self._host, self._port))
                 self._server_socket.listen(RT_ACCEPT_BACKLOG)
                 self._running = True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._log(f"[{RT_LOG_MODULE}] Bind error on " f"{self._host}:{self._port}: {e}.")
                 return False
 
@@ -99,15 +99,15 @@ class cl_CommServer:
         try:
             if client_socket:
                 client_socket.close()
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001
+            self._log(f"[{RT_LOG_MODULE}] Client socket close exception.")
 
         # Close the listening socket to unblock accept().
         try:
             if self._server_socket:
                 self._server_socket.close()
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001
+            self._log(f"[{RT_LOG_MODULE}] Server socket close exception.")
 
         if self._accept_thread and self._accept_thread.is_alive():
             self._accept_thread.join(timeout=2.0)
@@ -135,7 +135,7 @@ class cl_CommServer:
         while self._running:
             try:
                 client_socket, address = self._server_socket.accept()
-            except socket.error:
+            except OSError:
                 # Server socket was closed (stop() called).
                 break
 
@@ -151,7 +151,7 @@ class cl_CommServer:
 
             self.handler = cl_CommHandler(connection=connection, logger_callback=self._log, on_start_received=self._on_start_received,
                                           on_history_received=self._on_history_received, on_tick_received=self._on_tick_received,
-                                          on_conn_state=lambda connected: self._on_handler_conn_state(client_socket, connected),)
+                                          on_conn_state=lambda connected: self._on_handler_conn_state(client_socket, connected),)  # noqa: B023
 
             if self._on_conn_state:
                 self._on_conn_state(True)

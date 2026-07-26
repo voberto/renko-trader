@@ -2,13 +2,12 @@
 # Engine for building conventional OHLC candles from historical data and real-time ticks.
 
 import pandas as pd
-from typing import Optional
 
 
 class cl_CandleEngine:
     def __init__(self, timeframe_sec: int):
         self.timeframe_sec: int = timeframe_sec
-        self._current_candle: Optional[dict] = None  # Internal OHLC state (time as pd.Timestamp)
+        self._current_candle: dict | None = None  # Internal OHLC state (time as pd.Timestamp)
         self._candle_count_hist: int = 0
 
     def candle_count_hist_get(self):
@@ -32,17 +31,18 @@ class cl_CandleEngine:
         if "time" not in df.columns and "tstamp" in df.columns:
             df["time"] = df["tstamp"]
 
-        df["time"] = pd.to_datetime(df["time"], unit="s")
+        #df["time"] = pd.to_datetime(df["time"], unit="s")
+        df["time"] = pd.to_datetime(df["time"], unit="ms")
 
         # Historical regular candles provide their opening time in seconds.
-        # Preserve that instant as the real time with millisecond resolution.
+        # Preserve that instant as the real time.
         df_out = pd.DataFrame({
-            "time":  df["time"].to_list(),
+            "time":      df["time"].to_list(),
             "time_real": df["time"].to_list(),
-            "open":  df["open"].astype(float),
-            "high":  df["high"].astype(float),
-            "low":   df["low"].astype(float),
-            "close": df["close"].astype(float),
+            "open":      df["open"].astype(float),
+            "high":      df["high"].astype(float),
+            "low":       df["low"].astype(float),
+            "close":     df["close"].astype(float),
         })
 
         self._candle_count_hist = len(df["time"].to_list())
@@ -54,12 +54,12 @@ class cl_CandleEngine:
         # Time stored as Unix int to guarantee unambiguous comparison in process_tick
         last = df_out.iloc[-1]
         self._current_candle = {
-            "time":      int(last["time"].value) // 10**9,
-            "time_real": int(last["time_real"].value) // 10**6,
-            "open":  float(last["open"]),
-            "high":  float(last["high"]),
-            "low":   float(last["low"]),
-            "close": float(last["close"]),
+            "time":      int(last["time"].timestamp()),
+            "time_real": int(last["time_real"].timestamp() * 1000), 
+            "open":      float(last["open"]),
+            "high":      float(last["high"]),
+            "low":       float(last["low"]),
+            "close":     float(last["close"]),
         }
 
         return df_out
@@ -67,7 +67,7 @@ class cl_CandleEngine:
     # -------------------------------------------------------------------------
     # Public — Real-time tick
     # -------------------------------------------------------------------------
-    def process_tick(self, tick: dict) -> Optional[pd.Series]:
+    def process_tick(self, tick: dict) -> pd.Series | None:
         """
         Receives a raw tick dict from the EA (TX_DATA payload).
         Updates the internal OHLC state and returns a pd.Series ready for chart.update().

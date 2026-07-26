@@ -6,17 +6,16 @@ to render candles and technical indicators with a styled dark theme.
 """
 
 import pandas as pd
-from typing import Optional
-from .chart_custom import CustomChart
-
 from src.GUI.ui_constants import (
-    COLOR_CHART_BG,
-    COLOR_CHART_GRID,
-    COLOR_CANDLE_UP_BODY,
-    COLOR_CANDLE_UP_WICK,
     COLOR_CANDLE_DOWN_BODY,
     COLOR_CANDLE_DOWN_WICK,
+    COLOR_CANDLE_UP_BODY,
+    COLOR_CANDLE_UP_WICK,
+    COLOR_CHART_BG,
+    COLOR_CHART_GRID,
 )
+
+from .chart_custom import CustomChart
 
 
 class cl_Chart(CustomChart):
@@ -24,7 +23,7 @@ class cl_Chart(CustomChart):
         # QtChart manages its own QWebEngineView widget
         super().__init__()
         # Last rendered bar — kept for internal reference only
-        self._current_candle: Optional[pd.Series] = None
+        self._current_candle: pd.Series | None = None
         # Indicator line series — {name: line_object}
         self._indicator_lines: dict = {}
         # Configure dark theme styling on the TradingView chart widget
@@ -127,7 +126,7 @@ class cl_Chart(CustomChart):
 
         line.set(df_chart)
 
-    def update_indicator(self, name: str, series: Optional[pd.Series]) -> None:
+    def update_indicator(self, name: str, series: pd.Series | None) -> None:
         """
         Updates a named indicator line with a single new point.
 

@@ -6,10 +6,9 @@ import glob
 import json
 import os
 import re
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import pandas as pd
-
 
 IND_LOG_MODULE = "IND"
 
@@ -200,7 +199,7 @@ class cl_IndicatorEngine:
         # ---- 9. Instantiate via descriptor factory ----
         try:
             instance = descriptor["factory"](cfg)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._log(
                 f"[{IND_LOG_MODULE}] {filename} → INVALID: "
                 f"instantiation failed ({e})."
@@ -243,12 +242,12 @@ class cl_IndicatorEngine:
         for name, entry in self._registry.items():
             try:
                 results[name] = entry["instance"].process_history(df)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._log(f"[{IND_LOG_MODULE}] process_history error for '{name}': {e}.")
                 results[name] = pd.DataFrame(columns=["time", "value"])
         return results
 
-    def process_tick(self, brick: pd.Series) -> dict[str, Optional[pd.Series]]:
+    def process_tick(self, brick: pd.Series) -> dict[str, pd.Series | None]:
         """
         Runs process_tick() on every registered indicator when a new candle/brick
         is completed.
@@ -263,11 +262,11 @@ class cl_IndicatorEngine:
         dict mapping indicator name → pd.Series with fields 'time' and 'value',
         or None if the indicator returned None.
         """
-        results: dict[str, Optional[pd.Series]] = {}
+        results: dict[str, pd.Series | None] = {}
         for name, entry in self._registry.items():
             try:
                 results[name] = entry["instance"].process_tick(brick)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._log(f"[{IND_LOG_MODULE}] process_tick error for '{name}': {e}.")
                 results[name] = None
         return results
@@ -276,7 +275,7 @@ class cl_IndicatorEngine:
     # Accessors (used by cl_GUI for chart line setup)
     # ----
 
-    def get_color(self, name: str) -> Optional[str]:
+    def get_color(self, name: str) -> str | None:
         """Returns the color string for the given indicator name, or None if not found."""
         entry = self._registry.get(name)
         if entry is None:

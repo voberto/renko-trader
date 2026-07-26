@@ -194,7 +194,7 @@ void cl_TX::func_TX_history_chunk_send(cl_Comm_Sockets &obj_Comm_arg, int i_seq_
       {
          if(i > i_start) str_arr += ",";
          str_arr += "{\"time\":";
-         str_arr += IntegerToString(arr_tick_history[i].time);
+         str_arr += IntegerToString(arr_tick_history[i].time_msc);
          str_arr += ",\"price\":";
          str_arr += DoubleToString(arr_tick_history[i].bid, _Digits);
          str_arr += "}";
@@ -210,6 +210,7 @@ void cl_TX::func_TX_history_chunk_send(cl_Comm_Sockets &obj_Comm_arg, int i_seq_
          if(i > i_start) str_arr += ",";
          str_arr += "{\"time\":";
          str_arr += IntegerToString(arr_rates_history[i].time);
+         str_arr += "000";
          str_arr += ",\"open\":";
          str_arr += DoubleToString(arr_rates_history[i].open, _Digits);
          str_arr += ",\"high\":";

@@ -1,5 +1,7 @@
+from datetime import datetime, timezone
+
 from PySide6.QtWidgets import QPlainTextEdit
-from datetime import datetime
+
 
 class cl_Logger(QPlainTextEdit):
     def __init__(self):
@@ -19,7 +21,7 @@ class cl_Logger(QPlainTextEdit):
         """
         Adds a new line to the logger with a timestamp.
         """
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        timestamp = datetime.now(tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
         full_message = f"[{timestamp}] {message}"
         self.appendPlainText(full_message)
         

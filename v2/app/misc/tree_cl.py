@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import sys
 import argparse
-from pathlib import Path
-from typing import Iterable, List, Tuple, Optional
 import fnmatch
+import sys
+from collections.abc import Iterable
+from pathlib import Path
 
 TREE_BRANCH = "├── "
 TREE_LAST = "└── "
@@ -26,14 +24,14 @@ def human_size(num_bytes: int) -> str:
             return f"{size:.0f}{unit}" if unit == "B" else f"{size:.1f}{unit}"
         size /= 1024.0
 
-def should_exclude(path: Path, exclude_globs: List[str]) -> bool:
+def should_exclude(path: Path, exclude_globs: list[str]) -> bool:
     name = path.name
     for pattern in exclude_globs:
         if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(str(path), pattern):
             return True
     return False
 
-def list_dir_sorted(path: Path) -> Tuple[List[Path], List[Path]]:
+def list_dir_sorted(path: Path) -> tuple[list[Path], list[Path]]:
     try:
         entries = list(path.iterdir())
     except PermissionError:
@@ -42,24 +40,24 @@ def list_dir_sorted(path: Path) -> Tuple[List[Path], List[Path]]:
     files = sorted([e for e in entries if e.is_file()], key=lambda p: p.name.lower())
     return dirs, files
 
-def safe_count_lines(file_path: Path) -> Optional[int]:
+def safe_count_lines(file_path: Path) -> int | None:
     """Conta linhas com tolerância a encoding. Retorna None em erro."""
     try:
         # Tenta utf-8 primeiro
         with file_path.open("r", encoding="utf-8", errors="replace") as f:
             return sum(1 for _ in f)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 def build_tree(
     root: Path,
     prefix: str,
     show_hidden: bool,
-    exclude_globs: List[str],
-    max_depth: Optional[int],
+    exclude_globs: list[str],
+    max_depth: int | None,
     current_depth: int,
     show_sizes: bool,
-    count_ext: Optional[str],
+    count_ext: str | None,
     totals: dict,
 ) -> Iterable[str]:
     if max_depth is not None and current_depth >= max_depth:
@@ -71,9 +69,7 @@ def build_tree(
         hidden = p.name.startswith(".")
         if hidden and not show_hidden:
             return False
-        if should_exclude(p, exclude_globs):
-            return False
-        return True
+        return not should_exclude(p, exclude_globs)
 
     dirs = [d for d in dirs if visible(d)]
     files = [f for f in files if visible(f)]
@@ -95,15 +91,14 @@ def build_tree(
                 pass
 
         # Contagem de linhas (se extensão casar)
-        if not is_dir and count_ext:
-            if entry.suffix.lower() == count_ext:
-                n_lines = safe_count_lines(entry)
-                if n_lines is not None:
-                    line_suffix_parts.append(f"{n_lines} linhas")
-                    totals["total_lines"] += n_lines
-                    totals["files_counted"] += 1
-                else:
-                    line_suffix_parts.append("erro ao ler")
+        if not is_dir and count_ext and entry.suffix.lower() == count_ext:
+            n_lines = safe_count_lines(entry)
+            if n_lines is not None:
+                line_suffix_parts.append(f"{n_lines} linhas")
+                totals["total_lines"] += n_lines
+                totals["files_counted"] += 1
+            else:
+                line_suffix_parts.append("erro ao ler")
 
         if line_suffix_parts:
             line += "  (" + ", ".join(line_suffix_parts) + ")"
@@ -128,12 +123,12 @@ def build_tree(
 def print_tree(
     path: Path,
     show_hidden: bool = False,
-    exclude: List[str] = None,
+    exclude: list[str] | None = None,
     include_defaults: bool = True,
-    max_depth: Optional[int] = None,
+    max_depth: int | None = None,
     show_sizes: bool = False,
     header: bool = True,
-    count_lines_ext: Optional[str] = None,
+    count_lines_ext: str | None = None,
 ):
     path = path.resolve()
     if not path.exists():
@@ -175,7 +170,7 @@ def print_tree(
         print()
         print(f"Total de linhas em arquivos '*{count_ext}': {totals['total_lines']} (arquivos contados: {totals['files_counted']})")
 
-def parse_args(argv: List[str]) -> argparse.Namespace:
+def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Imprime a estrutura de diretórios/arquivos em formato de árvore, com opções de exclusão, profundidade e contagem de linhas por extensão."
     )
@@ -235,7 +230,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     
     return parser.parse_args(argv)
 
-def main(argv: List[str] = None):
+def main(argv: list[str] | None = None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
 
     if args.up is not None:

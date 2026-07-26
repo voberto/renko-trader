@@ -2,12 +2,12 @@
 # Engine for building Renko candles from historical ticks and real-time ticks.
 
 import math
-import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import pandas as pd
 
-_FAKE_TS_BASE: datetime  = datetime(1970, 1, 1)
+_FAKE_TS_BASE: datetime  = datetime(1970, 1, 1, tzinfo=timezone.utc)
 _FAKE_TS_STEP: timedelta = timedelta(minutes=1)
 
 
@@ -61,6 +61,8 @@ class cl_RenkoEngine:
         if not ticks or len(ticks) < 2:
             return empty
 
+        ticks = sorted(ticks, key=lambda x: int(x['time']))
+
         # Reset fake timestamp counter so history always starts at base
         self._fake_ts_counter = 0
 
@@ -75,9 +77,7 @@ class cl_RenkoEngine:
         for i, elem in enumerate(ticks):
             tstamp = int(elem["time"])
             price = float(elem["price"])
-
-            # Historical ticks currently provide timestamps in seconds only.
-            tstamp_msc = tstamp * 1000
+            tstamp_msc = tstamp
 
             if i == 0:
                 curr["time"]  = tstamp
@@ -87,9 +87,9 @@ class cl_RenkoEngine:
                 curr["close"] = price
             else:
                 curr["close"] = price
-                if price > curr["high"]:
+                if price > curr["high"]:  # noqa: PLR1730
                     curr["high"] = price
-                if price < curr["low"]:
+                if price < curr["low"]:  # noqa: PLR1730
                     curr["low"] = price
 
                 candle_size = abs(curr["close"] - curr["open"])
@@ -147,7 +147,7 @@ class cl_RenkoEngine:
     # ----
     # Public — Real-time tick
     # ----
-    def process_tick(self, tick: dict) -> Optional[pd.DataFrame]:
+    def process_tick(self, tick: dict) -> Optional[pd.DataFrame]:  # noqa: UP045
         """
         Receives a raw tick dict from the EA (TX_DATA payload).
         Updates the CbC state buffer and returns a DataFrame of new completed bricks,

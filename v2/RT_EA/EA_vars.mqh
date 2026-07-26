@@ -6,7 +6,7 @@
 #define COMM_MSG_DELIMITER          "<FRAME_END>"
 #define RX_STATE_CMD                "CMD"
 #define RX_SIZE_LIMIT               1000
-#define MAX_HISTORY_TICKS_SAFE_CAP  100000
+#define MAX_HISTORY_TICKS_SAFE_CAP  1000000
 // Protocol type
 #define TX_START                    "TX_START"
 #define TX_HISTORY                  "TX_HISTORY"

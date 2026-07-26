@@ -10,7 +10,6 @@ hardcoded strings spread throughout the GUI implementation.
 
 from PySide6.QtWidgets import QSizePolicy
 
-
 # =============================================================================
 # Window
 # =============================================================================

@@ -1,47 +1,45 @@
+import os  # noqa: N999
+
+import pandas as pd
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QDialog,
+    QFrame,
     QGridLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QFrame,
     QSizePolicy,
 )
-from PySide6.QtCore import Qt, Slot
-
-import os
-import pandas as pd
-
 from src.comm.comm_manager import cl_CommManager
 from src.GUI.ui_constants import (
-    WINDOW_TITLE,
-    WINDOW_WIDTH,
-    WINDOW_HEIGHT,
-    LABEL_SYMBOL,
-    LABEL_BRICK_SIZE,
-    SYMBOL_WAITING_TEXT,
+    BRICK_FIELD_WIDTH,
     BUTTON_CONNECT_TEXT,
     BUTTON_DISCONNECT_TEXT,
-    SYMBOL_FIELD_WIDTH,
-    BRICK_FIELD_WIDTH,
-    TOP_PANEL_HEIGHT,
+    DEFAULT_TIMEFRAME_SECONDS,
+    LABEL_BRICK_SIZE,
+    LABEL_SYMBOL,
     LAYOUT_MARGIN,
     LAYOUT_SPACING,
-    TOP_FRAME_HORIZONTAL_POLICY,
-    TOP_FRAME_VERTICAL_POLICY,
+    STYLE_BUTTON_CONNECT,
+    STYLE_BUTTON_DISCONNECT,
     STYLE_FRAME,
     STYLE_LABEL,
     STYLE_LINE_EDIT,
-    STYLE_BUTTON_CONNECT,
-    STYLE_BUTTON_DISCONNECT,
-    DEFAULT_TIMEFRAME_SECONDS,
+    SYMBOL_FIELD_WIDTH,
+    SYMBOL_WAITING_TEXT,
+    TOP_FRAME_HORIZONTAL_POLICY,
+    TOP_FRAME_VERTICAL_POLICY,
+    TOP_PANEL_HEIGHT,
+    WINDOW_HEIGHT,
+    WINDOW_TITLE,
+    WINDOW_WIDTH,
 )
-
-from .candles import cl_CandleEngine
-from .candles_renko import cl_RenkoEngine
 from src.indicators import build_indicator_engine
 from src.strategy.strategy import cl_StrategyManager
 
+from .candles import cl_CandleEngine
+from .candles_renko import cl_RenkoEngine
 
 # Absolute path to src/indicators/ — computed once at import time.
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -157,13 +155,11 @@ class cl_GUI(QDialog):
         """
         Initializes the chart section.
         """
-        pass
 
     def _init_logger(self):
         """
         Initializes the logger section.
         """
-        pass
 
     def _init_layout(self):
         """

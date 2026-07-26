@@ -2,14 +2,14 @@
 # Low-level TCP helpers for the Renko Trader V2 comm layer
 
 import socket
-from typing import List, Tuple, Optional, Any
+from typing import Any
 
-from .comm_constants import RT_FRAME_DELIMITER, RT_DEFAULT_BUFFER_SIZE
 from .comm_connection_model import cl_EA_Connection
+from .comm_constants import RT_DEFAULT_BUFFER_SIZE, RT_FRAME_DELIMITER
 
 
 def recv_messages_with_delimiter(connection: cl_EA_Connection, buffer_size: int = RT_DEFAULT_BUFFER_SIZE,
-                                 delimiter: bytes = RT_FRAME_DELIMITER, logger: Optional[Any] = None,) -> Tuple[List[str], bool]:
+                                 delimiter: bytes = RT_FRAME_DELIMITER, logger: Any | None = None,) -> tuple[list[str], bool]:
     """
     Read from the socket, accumulate into rx_buffer, and extract complete frames
     split by the newline delimiter (NDJSON protocol matching the EA).
@@ -18,7 +18,7 @@ def recv_messages_with_delimiter(connection: cl_EA_Connection, buffer_size: int 
       - messages: list of complete message strings (UTF-8)
       - closed:   True if the connection was closed by peer or an error occurred
     """
-    messages: List[str] = []
+    messages: list[str] = []
 
     try:
         chunk = connection.socket.recv(buffer_size)
@@ -60,11 +60,11 @@ def recv_messages_with_delimiter(connection: cl_EA_Connection, buffer_size: int 
 
         return messages, False
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         return messages, True
 
 
-def send_raw_text(sock: socket.socket, text: str, delimiter: bytes = RT_FRAME_DELIMITER, logger: Optional[Any] = None,) -> bool:
+def send_raw_text(sock: socket.socket, text: str, delimiter: bytes = RT_FRAME_DELIMITER, logger: Any | None = None,) -> bool:
     """
     Send a UTF-8 encoded text message.
     Used for ACKs and any steady-state text the App sends back to the EA.
@@ -73,7 +73,7 @@ def send_raw_text(sock: socket.socket, text: str, delimiter: bytes = RT_FRAME_DE
         payload = text.encode("utf-8") + delimiter
         sock.sendall(payload)
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         if logger is not None and hasattr(logger, "append_log"):
             logger.append_log(f"[COMM] Send error: {type(e).__name__}: {e}.")
         return False
